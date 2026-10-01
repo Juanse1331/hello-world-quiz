@@ -1,0 +1,12 @@
+{
+  "name": "hello-world-quiz-aceis",
+  "version": "1.0.0",
+  "description": "Quiz interactivo tipo Kahoot para ACEIS - Hello World",
+  "scripts": {
+    "start": "node server/index.js",
+    "build": "cd client && npm run build",
+    "dev:server": "cd server && npm run dev",
+    "dev:client": "cd client && npm run dev",
+    "setup": "cd server && npm install && cd ../client && npm install"
+  }
+}

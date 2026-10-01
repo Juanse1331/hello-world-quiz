@@ -1,0 +1,14 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 80" fill="none">
+  <!-- Cuerpo del pingüino - círculo azul marino -->
+  <circle cx="38" cy="42" r="32" fill="#1B1B8F"/>
+  <!-- Pico del pájaro -->
+  <path d="M8 38 L2 34 L8 30" fill="#1B1B8F"/>
+  <!-- Cara blanca del pingüino -->
+  <path d="M22 28 Q38 18 50 32 Q52 48 38 56 Q24 58 18 46 Q14 36 22 28Z" fill="white"/>
+  <!-- Ojo del pingüino -->
+  <circle cx="32" cy="34" r="3" fill="#1B1B8F"/>
+  <!-- Cola/cuerpo inferior -->
+  <path d="M20 62 Q38 70 56 62 Q52 74 38 74 Q24 74 20 62Z" fill="#1B1B8F"/>
+  <!-- Texto "ceis" -->
+  <text x="82" y="58" font-family="Georgia, serif" font-size="36" font-weight="bold" fill="#1B1B8F">ceis</text>
+</svg>
