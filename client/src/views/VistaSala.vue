@@ -1,7 +1,7 @@
 <template>
   <div class="sala-page">
     <header class="app-header">
-      <img src="../assets/logo-aceis.svg" alt="ACEIS" class="logo" />
+      <img src="../assets/logo-aceis.png" alt="ACEIS" class="logo" />
       <h1>Hello World Quiz</h1>
       <div class="header-info" v-if="state.nombre">
         <span class="nombre-chip">{{ state.nombre }}</span>
@@ -12,7 +12,7 @@
     <!-- Sala de espera -->
     <div v-if="!state.preguntaActual" class="container-sm" style="padding-top: 48px;">
       <div class="card fade-in espera-card">
-        <div class="espera-icon">⏳</div>
+        <div class="espera-icon"><Icon name="clock" :size="56" /></div>
         <h2>Esperando al profesor...</h2>
         <p>El quiz comenzará cuando el profesor lo inicie</p>
 
@@ -45,7 +45,7 @@
             {{ nivelLabel(state.preguntaActual.nivel) }}
           </span>
           <span class="badge badge-tipo">{{ tipoLabel(state.preguntaActual.tipo) }}</span>
-          <span class="badge badge-puntos">{{ state.preguntaActual.puntos }} pts</span>
+          <span class="badge badge-puntos">hasta {{ Math.round(state.preguntaActual.puntos * 1.5) }} pts</span>
         </div>
         <div v-if="state.timerActivo || state.tiempoRestante > 0" class="timer-container">
           <div class="timer-bar">
@@ -79,8 +79,8 @@
         >
           <span class="opcion-letra">{{ letras[idx] }}</span>
           <span class="opcion-texto">{{ opcion }}</span>
-          <span v-if="state.feedbackRespuesta && idx === state.feedbackRespuesta.respuestaCorrecta" class="opcion-icono">✅</span>
-          <span v-else-if="state.feedbackRespuesta && idx === respuestaSeleccionada && !state.feedbackRespuesta.esCorrecta" class="opcion-icono">❌</span>
+          <span v-if="state.feedbackRespuesta && idx === state.feedbackRespuesta.respuestaCorrecta" class="opcion-icono"><Icon name="check-circle" :size="22" /></span>
+          <span v-else-if="state.feedbackRespuesta && idx === respuestaSeleccionada && !state.feedbackRespuesta.esCorrecta" class="opcion-icono"><Icon name="x-circle" :size="22" /></span>
         </button>
       </div>
 
@@ -88,11 +88,11 @@
       <transition name="slide-up">
         <div v-if="state.feedbackRespuesta" class="feedback-card" :class="state.feedbackRespuesta.esCorrecta ? 'correcto' : 'incorrecto'">
           <div class="feedback-titulo">
-            <span v-if="state.feedbackRespuesta.esCorrecta">✅ ¡Correcto! +{{ state.feedbackRespuesta.puntos }} puntos</span>
-            <span v-else>❌ Incorrecto — 0 puntos</span>
+            <span v-if="state.feedbackRespuesta.esCorrecta"><Icon name="check-circle" :size="20" /> ¡Correcto! +{{ state.feedbackRespuesta.puntos }} puntos<small v-if="state.feedbackRespuesta.bonus" class="bonus-rapidez"> ({{ state.feedbackRespuesta.puntosBase }} base + {{ state.feedbackRespuesta.bonus }} por rapidez)</small></span>
+            <span v-else><Icon name="x-circle" :size="20" /> Incorrecto: 0 puntos</span>
           </div>
           <p class="feedback-explicacion">{{ state.feedbackRespuesta.explicacion }}</p>
-          <p class="feedback-tema">📚 Tema: {{ state.feedbackRespuesta.tema }}</p>
+          <p class="feedback-tema"><Icon name="book" :size="15" /> Tema: {{ state.feedbackRespuesta.tema }}</p>
           <p class="esperando-msg">Esperando al profesor para la siguiente pregunta...</p>
         </div>
       </transition>
@@ -104,6 +104,7 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuiz } from '../composables/useQuiz'
+import Icon from '../components/Icon.vue'
 
 const router = useRouter()
 const { state, stateRaw } = useQuiz()
@@ -158,6 +159,8 @@ function responder(idx) {
       stateRaw.feedbackRespuesta = {
         esCorrecta: res.esCorrecta,
         puntos: res.puntos,
+        puntosBase: res.puntosBase,
+        bonus: res.bonus,
         respuestaCorrecta: res.respuestaCorrecta,
         explicacion: res.explicacion,
         tema: res.tema
@@ -209,7 +212,7 @@ function responder(idx) {
   font-size: 14px;
 }
 .participante-chip.yo {
-  background: rgba(27,27,143,0.08);
+  background: rgba(32,44,69,0.08);
   border-color: var(--color-primary);
   color: var(--color-primary);
   font-weight: 600;
@@ -232,7 +235,7 @@ function responder(idx) {
   letter-spacing: 0.5px;
 }
 .badges { display: flex; gap: 6px; }
-.badge-puntos { background: rgba(27,27,143,0.1); color: var(--color-primary); }
+.badge-puntos { background: rgba(32,44,69,0.1); color: var(--color-primary); }
 .timer-container {
   margin-left: auto;
   display: flex;
@@ -289,7 +292,7 @@ function responder(idx) {
 }
 .opcion-btn:hover:not(:disabled) {
   border-color: var(--color-primary);
-  background: rgba(27,27,143,0.04);
+  background: rgba(32,44,69,0.04);
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
 }
@@ -328,6 +331,7 @@ function responder(idx) {
 }
 .feedback-card.correcto { background: var(--color-success-light); border-left: 4px solid var(--color-success); }
 .feedback-card.incorrecto { background: var(--color-error-light); border-left: 4px solid var(--color-error); }
+.bonus-rapidez { font-weight: 600; opacity: 0.85; }
 .feedback-titulo { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
 .feedback-explicacion { font-size: 14px; margin-bottom: 6px; }
 .feedback-tema { font-size: 13px; color: var(--color-text-light); margin-bottom: 8px; }

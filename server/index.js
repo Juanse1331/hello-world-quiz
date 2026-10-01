@@ -21,6 +21,18 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'aceis2024';
 // Token aleatorio por arranque: no expone la contraseña y valida las acciones de admin por socket
 const ADMIN_TOKEN = require('crypto').randomBytes(24).toString('hex');
 
+// Bonus por rapidez: una respuesta correcta suma hasta +50% de los puntos base,
+// decayendo linealmente desde la publicación de la pregunta hasta el fin de la ventana.
+const BONUS_MAX = 0.5;
+const VENTANA_SIN_TIMER = 30; // segundos de referencia cuando el temporizador está desactivado
+
+function calcularBonus(sala, puntosBase) {
+  const ventanaMs = (sala.timerActivo ? sala.segundosPorPregunta : VENTANA_SIN_TIMER) * 1000;
+  const transcurrido = Date.now() - sala.preguntaInicio;
+  const fraccionRestante = Math.min(1, Math.max(0, 1 - transcurrido / ventanaMs));
+  return Math.round(puntosBase * BONUS_MAX * fraccionRestante);
+}
+
 // Estado en memoria: Map<codigoSala, sala>
 const salas = new Map();
 
@@ -133,6 +145,7 @@ function emitirPreguntaActual(sala) {
   }
 
   sala.tiempoAgotado = false;
+  sala.preguntaInicio = Date.now();
   const pregunta = sala.preguntas[sala.preguntaActualIdx];
   const preguntaParaEstudiante = {
     id: pregunta.id,
@@ -235,6 +248,7 @@ io.on('connection', (socket) => {
       timerInterval: null,
       tiempoRestante: 0,
       tiempoAgotado: false,
+      preguntaInicio: 0,
       avanceTimeout: null
     };
 
@@ -370,12 +384,16 @@ io.on('connection', (socket) => {
       return;
     }
     const esCorrecta = respuesta === pregunta.respuesta_correcta;
-    const puntos = esCorrecta ? pregunta.puntos : 0;
+    const puntosBase = esCorrecta ? pregunta.puntos : 0;
+    const bonus = esCorrecta ? calcularBonus(sala, pregunta.puntos) : 0;
+    const puntos = puntosBase + bonus;
 
     participante.respuestas[idxPregunta] = {
       respuesta,
       esCorrecta,
       puntos,
+      puntosBase,
+      bonus,
       opcionDada: pregunta.opciones[respuesta] || ''
     };
     participante.puntaje += puntos;
@@ -390,6 +408,8 @@ io.on('connection', (socket) => {
         respuesta,
         esCorrecta,
         puntos,
+        puntosBase,
+        bonus,
         puntajeTotal: participante.puntaje,
         totalRespondieron: sala.participantes.filter(p => p.respuestas[idxPregunta] !== undefined).length,
         totalParticipantes: sala.participantes.length
@@ -400,6 +420,8 @@ io.on('connection', (socket) => {
       ok: true,
       esCorrecta,
       puntos,
+      puntosBase,
+      bonus,
       respuestaCorrecta: pregunta.respuesta_correcta,
       explicacion: pregunta.explicacion,
       tema: pregunta.tema

@@ -1,26 +1,26 @@
-﻿:root {
-  --color-primary: #1B1B8F;
-  --color-primary-dark: #0F0F6B;
-  --color-primary-light: #2828B8;
-  --color-accent: #4A90D9;
-  --color-success: #27AE60;
-  --color-success-light: #D4EDDA;
-  --color-error: #E74C3C;
-  --color-error-light: #FADBD8;
-  --color-warning: #F39C12;
-  --color-bg: #F5F6FA;
+:root {
+  --color-primary: #202C45;
+  --color-primary-dark: #101622;
+  --color-primary-light: #304268;
+  --color-accent: #F2184F;
+  --color-success: #3D7A22;
+  --color-success-light: #EAF5E2;
+  --color-error: #B3261E;
+  --color-error-light: #FCEBEA;
+  --color-warning: #C99500;
+  --color-bg: #F6F7FA;
   --color-white: #FFFFFF;
-  --color-text: #2C3E50;
-  --color-text-light: #7F8C8D;
-  --color-border: #E0E0E0;
+  --color-text: #1A2233;
+  --color-text-light: #5A6275;
+  --color-border: #DDE2EB;
   --color-card: #FFFFFF;
-  --shadow-sm: 0 2px 8px rgba(27,27,143,0.08);
-  --shadow-md: 0 4px 16px rgba(27,27,143,0.12);
-  --shadow-lg: 0 8px 32px rgba(27,27,143,0.16);
+  --shadow-sm: 0 2px 8px rgba(32,44,69,0.08);
+  --shadow-md: 0 4px 16px rgba(32,44,69,0.12);
+  --shadow-lg: 0 8px 32px rgba(32,44,69,0.16);
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 20px;
-  --font-main: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-main: 'Cabin', 'Gill Sans', 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
 
 *, *::before, *::after {
@@ -139,7 +139,7 @@ html, body {
 .form-control:focus {
   outline: none;
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(27,27,143,0.1);
+  box-shadow: 0 0 0 3px rgba(32,44,69,0.1);
 }
 
 /* Badges de nivel */
@@ -158,7 +158,7 @@ html, body {
 
 /* Badges de tipo */
 .badge-tipo {
-  background: rgba(27,27,143,0.1);
+  background: rgba(32,44,69,0.1);
   color: var(--color-primary);
 }
 
@@ -170,11 +170,14 @@ html, body {
   display: flex;
   align-items: center;
   gap: 16px;
+  border-bottom: 3px solid var(--color-accent);
   box-shadow: var(--shadow-md);
 }
 .app-header .logo {
-  height: 40px;
-  filter: brightness(0) invert(1);
+  height: 44px;
+  background: #fff;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
 }
 .app-header h1 {
   font-size: 18px;
@@ -208,7 +211,7 @@ html, body {
 .spinner {
   width: 40px;
   height: 40px;
-  border: 4px solid rgba(27,27,143,0.15);
+  border: 4px solid rgba(32,44,69,0.15);
   border-top-color: var(--color-primary);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;

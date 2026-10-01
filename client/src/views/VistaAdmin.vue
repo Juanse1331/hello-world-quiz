@@ -1,7 +1,7 @@
 ﻿<template>
   <div class="admin-page">
     <header class="app-header">
-      <img src="../assets/logo-aceis.svg" alt="ACEIS" class="logo" />
+      <img src="../assets/logo-aceis.png" alt="ACEIS" class="logo" />
       <h1>Hello World Quiz · Admin</h1>
       <div class="header-info" v-if="autenticado">
         <span class="nombre-chip">Profesor</span>
@@ -11,7 +11,7 @@
     <div v-if="!autenticado" class="container-sm" style="padding-top: 80px;">
       <div class="card fade-in">
         <div class="card-header-aceis">
-          <h2>🔐 Acceso Administrador</h2>
+          <h2><Icon name="lock" :size="22" /> Acceso Administrador</h2>
           <p>Ingresa la contraseña para continuar</p>
         </div>
         <form @submit.prevent="iniciarSesion" style="margin-top: 24px;">
@@ -25,7 +25,7 @@
           </button>
         </form>
         <div style="text-align:center; margin-top:16px;">
-          <router-link to="/" style="color: var(--color-text-light); font-size:13px;">← Volver al inicio</router-link>
+          <router-link to="/" style="color: var(--color-text-light); font-size:13px;"><Icon name="arrow-left" :size="14" /> Volver al inicio</router-link>
         </div>
       </div>
     </div>
@@ -74,7 +74,7 @@
                 <div class="pregunta-meta">
                   <span class="badge" :class="'badge-' + p.nivel">{{ nivelLabel(p.nivel) }}</span>
                   <span class="badge badge-tipo">{{ tipoLabel(p.tipo) }}</span>
-                  <span class="badge" style="background:#e8f4fd; color:#1565c0;">{{ p.puntos }} pts</span>
+                  <span class="badge" style="background:#E9EDF5; color:#202C45;">{{ p.puntos }} pts</span>
                 </div>
               </div>
             </div>
@@ -96,16 +96,16 @@
                 </div>
               </div>
               <div class="orden-controls">
-                <button @click="moverArriba(idx)" :disabled="idx === 0" class="btn-orden">▲</button>
-                <button @click="moverAbajo(idx)" :disabled="idx === seleccionadas.length - 1" class="btn-orden">▼</button>
-                <button @click="quitarPregunta(idx)" class="btn-orden btn-quitar">✕</button>
+                <button @click="moverArriba(idx)" :disabled="idx === 0" class="btn-orden" aria-label="Subir"><Icon name="chevron-up" :size="14" /></button>
+                <button @click="moverAbajo(idx)" :disabled="idx === seleccionadas.length - 1" class="btn-orden" aria-label="Bajar"><Icon name="chevron-down" :size="14" /></button>
+                <button @click="quitarPregunta(idx)" class="btn-orden btn-quitar" aria-label="Quitar"><Icon name="x" :size="14" /></button>
               </div>
             </div>
           </div>
           <div class="seleccionadas-footer">
-            <div class="total-puntos">Puntos totales: <strong>{{ totalPuntos }}</strong></div>
+            <div class="total-puntos">Puntos base: <strong>{{ totalPuntos }}</strong> (hasta +50% por rapidez)</div>
             <button class="btn btn-primary btn-lg btn-block" :disabled="seleccionadas.length === 0 || cargandoSala" @click="crearSala">
-              {{ cargandoSala ? 'Creando sala...' : '🚀 Crear sala' }}
+              {{ cargandoSala ? 'Creando sala...' : 'Crear sala' }}
             </button>
             <div v-if="errorSala" class="alert alert-error" style="margin-top: 8px;">{{ errorSala }}</div>
           </div>
@@ -127,7 +127,7 @@
         </div>
         <div class="sala-acciones">
           <button class="btn btn-success btn-lg" :disabled="state.participantes.length === 0" @click="iniciarQuiz">
-            ▶ Iniciar Quiz ({{ state.participantes.length }} participantes)
+            <Icon name="play" :size="18" /> Iniciar Quiz ({{ state.participantes.length }} participantes)
           </button>
           <button class="btn btn-secondary" @click="nuevaSesion">Cancelar y Nueva sesión</button>
         </div>        <div v-if="state.participantes.length > 0" class="participantes-espera">
@@ -157,7 +157,8 @@
           </div>
           <div class="control-botones">
             <button class="btn btn-primary" @click="siguientePregunta" :disabled="quizTerminado">
-              {{ esUltimaPregunta ? '⏹ Terminar Quiz' : '⏭ Siguiente pregunta' }}
+              <template v-if="esUltimaPregunta"><Icon name="square" :size="16" /> Terminar Quiz</template>
+              <template v-else><Icon name="skip-forward" :size="16" /> Siguiente pregunta</template>
             </button>
             <button class="btn btn-danger btn-sm" @click="terminarQuizForzado" v-if="!quizTerminado && !esUltimaPregunta">
               Terminar ahora
@@ -186,9 +187,9 @@
                 <td class="td-Código">{{ p.codigoEstudiante }}</td>
                 <td class="td-progreso">{{ (p.respuestas || []).filter(r => r !== undefined).length }} / {{ seleccionadas.length }}</td>
                 <td class="td-estado">
-                  <span v-if="estadoActual(p) === 'respondio-correcto'" class="estado-chip correcto">✅ Correcto</span>
-                  <span v-else-if="estadoActual(p) === 'respondio-incorrecto'" class="estado-chip incorrecto">❌ Incorrecto</span>
-                  <span v-else class="estado-chip esperando">⏳ Esperando</span>
+                  <span v-if="estadoActual(p) === 'respondio-correcto'" class="estado-chip correcto"><Icon name="check-circle" :size="14" /> Correcto</span>
+                  <span v-else-if="estadoActual(p) === 'respondio-incorrecto'" class="estado-chip incorrecto"><Icon name="x-circle" :size="14" /> Incorrecto</span>
+                  <span v-else class="estado-chip esperando"><Icon name="clock" :size="14" /> Esperando</span>
                 </td>
                 <td class="td-puntaje"><strong>{{ p.puntaje || 0 }}</strong></td>
               </tr>
@@ -218,17 +219,18 @@
 
         <div v-if="quizTerminado && state.resultados" class="card resultados-admin fade-in">
           <div class="resultados-header">
-            <h3>🏆 Resultados finales</h3>
-            <button class="btn btn-success" @click="exportarCSV">⬇ Exportar CSV</button>
+            <h3><Icon name="trophy" :size="20" /> Resultados finales</h3>
+            <button class="btn btn-success" @click="exportarExcel"><Icon name="download" :size="16" /> Exportar Excel</button>
             <button class="btn btn-secondary" @click="nuevaSesion">Nueva sesión</button>
           </div>
+          <Podio :resultados="state.resultados" style="margin-bottom: 24px;" />
           <table class="monitor-tabla">
             <thead>
               <tr><th>Pos.</th><th>Nombre</th><th>Código</th><th>Correctas</th><th>Puntaje</th></tr>
             </thead>
             <tbody>
               <tr v-for="(r, idx) in state.resultados" :key="r.id" :class="idx === 0 ? 'primer-lugar' : ''">
-                <td>{{ idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : idx + 1 }}</td>
+                <td><Icon v-if="idx < 3" name="medal" :size="20" :class="'medalla-' + idx" /><template v-else>{{ idx + 1 }}</template></td>
                 <td><strong>{{ r.nombre }}</strong></td>
                 <td>{{ r.codigoEstudiante }}</td>
                 <td>{{ r.totalCorrectas }} / {{ r.totalPreguntas }}</td>
@@ -244,6 +246,8 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useQuiz } from '../composables/useQuiz'
+import Icon from '../components/Icon.vue'
+import Podio from '../components/Podio.vue'
 
 const { state, stateRaw, registrarEventosAdmin } = useQuiz()
 
@@ -431,20 +435,46 @@ function nuevaSesion() {
   codigoSalaActiva.value = ''; preguntaActualMonitor.value = null; participanteDetalleId.value = null
   seleccionadas.value = []; stateRaw.participantes = []; stateRaw.resultados = null; stateRaw.salaCreada = null
 }
-function exportarCSV() {
+async function exportarExcel() {
   if (!state.resultados) return
-  const header = 'Posicion,Nombre,Código Estudiante,Correctas,Total Preguntas,Puntaje\n'
-  const rows = state.resultados.map((r, idx) =>
-    `${idx + 1},"${String(r.nombre).replace(/"/g, '""')}","${String(r.codigoEstudiante).replace(/"/g, '""')}",${r.totalCorrectas},${r.totalPreguntas},${r.puntaje}`
-  ).join('\n')
-  const csv = header + rows
-  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `quiz-resultados-${codigoSalaActiva.value}-${new Date().toISOString().slice(0,10)}.csv`
-  a.click()
-  URL.revokeObjectURL(url)
+  const { default: writeExcelFile } = await import('write-excel-file/browser')
+  const encabezado = (textos) => textos.map(value => ({
+    value, fontWeight: 'bold', textColor: '#FFFFFF', backgroundColor: '#202C45'
+  }))
+
+  const resultados = [
+    encabezado(['Posición', 'Nombre', 'Código estudiante', 'Correctas', 'Total preguntas', 'Bonus rapidez', 'Puntaje']),
+    ...state.resultados.map((r, idx) => [
+      { value: idx + 1 },
+      { value: r.nombre },
+      { value: String(r.codigoEstudiante) },
+      { value: r.totalCorrectas },
+      { value: r.totalPreguntas },
+      { value: r.respuestas.reduce((a, x) => a + (x.bonus || 0), 0) },
+      { value: r.puntaje, fontWeight: 'bold' }
+    ])
+  ]
+
+  const detalle = [
+    encabezado(['Nombre', 'Código estudiante', 'Pregunta', 'Enunciado', 'Respondió', 'Respuesta correcta', 'Resultado', 'Puntos base', 'Bonus rapidez', 'Puntos']),
+    ...state.resultados.flatMap(r => r.respuestas.map((x, idx) => [
+      { value: r.nombre },
+      { value: String(r.codigoEstudiante) },
+      { value: idx + 1 },
+      { value: x.enunciado },
+      { value: x.opcionDada || 'Sin respuesta' },
+      { value: x.opcionCorrecta },
+      { value: x.respuesta === null ? 'Sin respuesta' : x.esCorrecta ? 'Correcta' : 'Incorrecta' },
+      { value: x.puntosBase || 0 },
+      { value: x.bonus || 0 },
+      { value: x.puntos || 0 }
+    ]))
+  ]
+
+  await writeExcelFile([
+    { data: resultados, sheet: 'Resultados', columns: [{ width: 10 }, { width: 28 }, { width: 18 }, { width: 11 }, { width: 15 }, { width: 14 }, { width: 10 }] },
+    { data: detalle, sheet: 'Detalle', columns: [{ width: 28 }, { width: 18 }, { width: 10 }, { width: 50 }, { width: 28 }, { width: 28 }, { width: 14 }, { width: 12 }, { width: 14 }, { width: 8 }] }
+  ]).toFile(`quiz-resultados-${codigoSalaActiva.value}-${new Date().toISOString().slice(0, 10)}.xlsx`)
 }
 </script>
 <style scoped>
@@ -499,8 +529,8 @@ function exportarCSV() {
 @media (max-width: 768px) { .config-grid { grid-template-columns: 1fr; } }
 .preguntas-lista { max-height: 420px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
 .pregunta-item { display: flex; align-items: flex-start; gap: 10px; padding: 12px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); cursor: pointer; transition: all 0.15s; }
-.pregunta-item:hover { border-color: var(--color-primary); background: rgba(27,27,143,0.03); }
-.pregunta-item.seleccionada { border-color: var(--color-primary); background: rgba(27,27,143,0.06); }
+.pregunta-item:hover { border-color: var(--color-primary); background: rgba(32,44,69,0.03); }
+.pregunta-item.seleccionada { border-color: var(--color-primary); background: rgba(32,44,69,0.06); }
 .pregunta-check { flex-shrink: 0; accent-color: var(--color-primary); width: 16px; height: 16px; cursor: pointer; }
 .pregunta-preview { font-size: 13px; margin-bottom: 6px; }
 .pregunta-meta { display: flex; gap: 4px; flex-wrap: wrap; }
@@ -524,7 +554,7 @@ function exportarCSV() {
 .participantes-espera { text-align: left; padding-top: 16px; border-top: 1px solid var(--color-border); }
 .participantes-espera h4 { color: var(--color-text-light); font-size: 13px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
 .participantes-chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.participante-chip-admin { background: rgba(27,27,143,0.06); border: 1px solid rgba(27,27,143,0.2); padding: 6px 14px; border-radius: 20px; font-size: 14px; }
+.participante-chip-admin { background: rgba(32,44,69,0.06); border: 1px solid rgba(32,44,69,0.2); padding: 6px 14px; border-radius: 20px; font-size: 14px; }
 .participante-chip-admin .Código-est { font-size: 12px; color: var(--color-text-light); margin-left: 4px; }.monitor-control { display: flex; align-items: center; justify-content: space-between; background: var(--color-primary); color: white; padding: 16px 24px; border-radius: var(--radius-md); margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
 .control-info { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
 .sala-badge { background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: 700; letter-spacing: 1px; }
@@ -539,7 +569,7 @@ function exportarCSV() {
 .monitor-tabla th { background: var(--color-bg); padding: 10px 12px; text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--color-text-light); border-bottom: 2px solid var(--color-border); }
 .monitor-tabla td { padding: 12px; border-bottom: 1px solid var(--color-border); }
 .participante-row { cursor: pointer; transition: background 0.15s; }
-.participante-row:hover { background: rgba(27,27,143,0.04); }
+.participante-row:hover { background: rgba(32,44,69,0.04); }
 .participante-row.desconectado { opacity: 0.5; }
 .desconectado-badge { background: var(--color-error-light); color: var(--color-error); font-size: 11px; padding: 2px 6px; border-radius: 4px; margin-left: 6px; }
 .estado-chip { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
@@ -557,5 +587,8 @@ function exportarCSV() {
 .td-enunciado-corto { max-width: 200px; font-size: 12px; color: var(--color-text-light); }
 .resultados-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
 .resultados-header h3 { font-size: 18px; color: var(--color-primary); }
+.medalla-0 { color: #C99500; }
+.medalla-1 { color: #8A94A6; }
+.medalla-2 { color: #B8651B; }
 .primer-lugar { background: rgba(255,215,0,0.1); font-weight: 700; }
 </style>

@@ -1,7 +1,7 @@
 <template>
   <div class="ingreso-page">
     <header class="app-header">
-      <img src="../assets/logo-aceis.svg" alt="ACEIS" class="logo" />
+      <img src="../assets/logo-aceis.png" alt="ACEIS" class="logo" />
       <h1>Hello World Quiz</h1>
     </header>
 
@@ -62,12 +62,12 @@
             :disabled="cargando || !state.conectado"
           >
             <span v-if="cargando">Uniéndome...</span>
-            <span v-else>🚀 Unirme al quiz</span>
+            <span v-else>Unirme al quiz <Icon name="arrow-right" :size="18" /></span>
           </button>
         </form>
 
         <div class="admin-link">
-          <router-link to="/admin">¿Eres el profesor? Accede al panel admin →</router-link>
+          <router-link to="/admin">¿Eres el profesor? Accede al panel admin <Icon name="arrow-right" :size="14" /></router-link>
         </div>
       </div>
     </main>
@@ -78,6 +78,7 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuiz } from '../composables/useQuiz'
+import Icon from '../components/Icon.vue'
 
 const router = useRouter()
 const { state, stateRaw, registrarEventosEstudiante } = useQuiz()

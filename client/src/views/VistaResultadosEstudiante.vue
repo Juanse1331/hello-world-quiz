@@ -1,14 +1,19 @@
 <template>
   <div class="resultados-page">
     <header class="app-header">
-      <img src="../assets/logo-aceis.svg" alt="ACEIS" class="logo" />
+      <img src="../assets/logo-aceis.png" alt="ACEIS" class="logo" />
       <h1>Hello World Quiz</h1>
     </header>
 
     <main class="container" style="padding-top: 32px;" v-if="miResultado">
+      <!-- Podio -->
+      <div class="card podio-card fade-in">
+        <h3 class="podio-titulo"><Icon name="trophy" :size="20" /> Podio</h3>
+        <Podio :resultados="state.resultados" :mi-codigo="state.codigoEstudiante" />
+      </div>
       <!-- Puntaje principal -->
-      <div class="card resultado-hero fade-in">
-        <div class="trofeo">{{ clasificacionEmoji }}</div>
+      <div class="card resultado-hero fade-in" style="margin-top: 16px;">
+        <div class="trofeo"><Icon :name="clasificacionIcono" :size="64" /></div>
         <h2 class="clasificacion-label">{{ clasificacionLabel }}</h2>
         <div class="puntaje-grande">{{ puntajeAnimado }}</div>
         <div class="puntaje-sub">puntos</div>
@@ -52,15 +57,17 @@
                   Tu respuesta: {{ r.opcionDada || 'No respondiste' }}
                 </span>
                 <span v-if="!r.esCorrecta" class="resp-correcta">
-                  &#x2713; Correcta: {{ r.opcionCorrecta }}
+                  <Icon name="check" :size="14" /> Correcta: {{ r.opcionCorrecta }}
                 </span>
               </div>
               <div class="resumen-explicacion">{{ r.explicacion }}</div>
-              <div class="resumen-tema">&#x1F4DA; {{ r.tema }}</div>
+              <div class="resumen-tema"><Icon name="book" :size="14" /> {{ r.tema }}</div>
             </div>
             <div class="resumen-puntos">
               <span :class="r.esCorrecta ? 'puntos-ok' : 'puntos-no'">
                 {{ r.esCorrecta ? '+' + r.puntos : '0' }} pts
+              </span>
+              <span v-if="r.bonus" class="bonus-detalle">incl. +{{ r.bonus }} rapidez
               </span>
             </div>
           </div>
@@ -77,6 +84,8 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useQuiz } from '../composables/useQuiz'
+import Icon from '../components/Icon.vue'
+import Podio from '../components/Podio.vue'
 
 const { state } = useQuiz()
 
@@ -104,11 +113,11 @@ const clasificacionLabel = computed(() => {
   return 'Sigue practicando'
 })
 
-const clasificacionEmoji = computed(() => {
+const clasificacionIcono = computed(() => {
   const p = porcentaje.value
-  if (p >= 80) return '🏆'
-  if (p >= 60) return '🎯'
-  return '📚'
+  if (p >= 80) return 'trophy'
+  if (p >= 60) return 'target'
+  return 'book'
 })
 
 onMounted(() => {
@@ -175,6 +184,9 @@ onMounted(() => {
 .resumen-explicacion { font-size: 13px; color: var(--color-text-light); margin-bottom: 2px; }
 .resumen-tema { font-size: 12px; color: var(--color-text-light); }
 .resumen-puntos { font-weight: 700; font-size: 15px; flex-shrink: 0; }
+.podio-card { padding-bottom: 0; overflow: hidden; }
+.podio-titulo { text-align: center; color: var(--color-primary); margin-bottom: 12px; }
+.bonus-detalle { display: block; font-size: 11px; font-weight: 600; color: var(--color-text-light); text-align: right; }
 .puntos-ok { color: var(--color-success); }
 .puntos-no { color: var(--color-text-light); }
 </style>
