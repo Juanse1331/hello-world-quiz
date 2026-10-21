@@ -3,6 +3,10 @@
     <header class="app-header">
       <img src="../assets/logo-aceis.png" alt="ACEIS" class="logo" />
       <h1>Hello World Quiz · Admin</h1>
+      <nav class="nav-modos" v-if="autenticado">
+        <router-link to="/admin" class="nav-modo activo">Quiz</router-link>
+        <router-link to="/admin/retos" class="nav-modo">Reto de programación</router-link>
+      </nav>
       <div class="header-info" v-if="autenticado">
         <span class="nombre-chip">Profesor</span>
         <button class="btn btn-sm btn-secondary" @click="cerrarSesion">Cerrar sesión</button>
@@ -682,6 +686,10 @@ async function exportarExcel() {
 .medalla-1 { color: #8A94A6; }
 .medalla-2 { color: #B8651B; }
 .primer-lugar { background: rgba(255,215,0,0.1); font-weight: 700; }
+.nav-modos { display: flex; gap: 4px; margin-left: 16px; background: rgba(255,255,255,0.1); padding: 4px; border-radius: var(--radius-sm); }
+.nav-modo { color: rgba(255,255,255,0.8); text-decoration: none; padding: 6px 14px; border-radius: 6px; font-size: 14px; font-weight: 600; }
+.nav-modo:hover { color: white; }
+.nav-modo.activo { background: white; color: var(--color-primary); }
 .timer-equivalente { font-size: 13px; color: var(--color-text-light); }
 .filtro-select { width: auto; min-width: 260px; max-width: 100%; padding: 6px 10px; font-size: 13px; }
 .badge-tema { background: #F1F3F8; color: var(--color-text-light); font-weight: 500; }

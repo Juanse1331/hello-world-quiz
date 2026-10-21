@@ -8,8 +8,13 @@
     <main class="container-sm" style="padding-top: 48px;">
       <div class="card fade-in">
         <div class="card-header-aceis">
-          <h2>Unirte al Quiz</h2>
-          <p>Ingresa tus datos y el código de la sala</p>
+          <h2>Unirte a una sala</h2>
+          <p>Ingresa tus datos y el código que te dio el profesor (quiz o reto de programación)</p>
+        </div>
+
+        <div v-if="sesionReto" class="alert alert-info reto-pendiente">
+          <span>Tienes un reto de programación en curso (<strong>{{ sesionReto.codigoSala }}</strong>).</span>
+          <button type="button" class="btn btn-sm btn-primary" @click="router.push('/reto')">Continuar <Icon name="arrow-right" :size="14" /></button>
         </div>
 
         <form @submit.prevent="unirse" style="margin-top: 24px;">
@@ -62,7 +67,7 @@
             :disabled="cargando || !state.conectado"
           >
             <span v-if="cargando">Uniéndome...</span>
-            <span v-else>Unirme al quiz <Icon name="arrow-right" :size="18" /></span>
+            <span v-else>Entrar <Icon name="arrow-right" :size="18" /></span>
           </button>
         </form>
 
@@ -78,10 +83,13 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuiz } from '../composables/useQuiz'
+import { useReto } from '../composables/useReto'
 import Icon from '../components/Icon.vue'
 
 const router = useRouter()
 const { state, stateRaw, registrarEventosEstudiante } = useQuiz()
+const { aplicarIngreso, leerSesion } = useReto()
+const sesionReto = leerSesion()
 
 const form = reactive({
   nombre: '',
@@ -108,7 +116,11 @@ function unirse() {
     codigoSala: form.codigoSala.trim().toUpperCase()
   }, (respuesta) => {
     cargando.value = false
-    if (respuesta.ok) {
+    if (respuesta.ok && respuesta.modo === 'reto') {
+      // La sala es un reto de programación
+      aplicarIngreso(respuesta, { nombre: form.nombre.trim(), codigoEstudiante: form.codigoEstudiante.trim() })
+      router.push('/reto')
+    } else if (respuesta.ok) {
       stateRaw.nombre = form.nombre.trim()
       stateRaw.codigoEstudiante = form.codigoEstudiante.trim()
       stateRaw.codigoSala = form.codigoSala.trim().toUpperCase()
@@ -146,6 +158,14 @@ function unirse() {
   letter-spacing: 2px;
   text-align: center;
   color: var(--color-primary);
+}
+.reto-pendiente {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+  flex-wrap: wrap;
 }
 .admin-link {
   text-align: center;

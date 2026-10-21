@@ -1,4 +1,5 @@
-﻿require('dotenv').config();
+﻿// Lee server/.env sin importar desde qué carpeta se arranque el servidor
+require('dotenv').config({ path: require('path').join(__dirname, '.env') });
 const express = require('express');
 const { createServer } = require('http');
 const { Server } = require('socket.io');
@@ -41,6 +42,29 @@ const bancoPreguntas = JSON.parse(
   fs.readFileSync(path.join(__dirname, 'data', 'banco_preguntas.json'), 'utf-8')
 );
 
+// --- Modo reto de programación (ver server/retos/) ---
+const { crearGestorRetos } = require('./retos');
+const bancoProblemas = JSON.parse(
+  fs.readFileSync(path.join(__dirname, 'data', 'banco_problemas.json'), 'utf-8')
+);
+const gestorRetos = crearGestorRetos({
+  io,
+  bancoProblemas,
+  adminToken: ADMIN_TOKEN,
+  generarCodigo: codigoLibre,
+  rutaGuardado: path.join(__dirname, 'data', 'retos-guardados.json'),
+  config: {
+    enviosSimultaneos: parseInt(process.env.RETO_ENVIOS_SIMULTANEOS) || 4,
+    pruebasParalelas: parseInt(process.env.RETO_PRUEBAS_PARALELAS) || 3,
+    esperaEnvioMs: (parseInt(process.env.RETO_ESPERA_ENVIO_S) || 10) * 1000
+  }
+});
+// Guardar el estado de los retos antes de cerrar el servidor (Ctrl+C)
+['SIGINT', 'SIGTERM'].forEach(senal => process.on(senal, () => {
+  gestorRetos.guardarYa();
+  process.exit(0);
+}));
+
 // --- REST API ---
 app.get('/api/preguntas', (req, res) => {
   res.json(bancoPreguntas);
@@ -53,6 +77,20 @@ app.post('/api/admin/auth', (req, res) => {
   } else {
     res.status(401).json({ ok: false, mensaje: 'Contraseña incorrecta' });
   }
+});
+
+// Rutas del profesor para el modo reto (requieren el token de admin en la cabecera x-admin-token)
+function exigirAdmin(req, res, next) {
+  if (req.get('x-admin-token') === ADMIN_TOKEN) return next();
+  res.status(401).json({ ok: false, mensaje: 'No autorizado' });
+}
+
+app.get('/api/admin/problemas', exigirAdmin, (req, res) => {
+  res.json(gestorRetos.listarProblemasAdmin());
+});
+
+app.get('/api/admin/motor', exigirAdmin, async (req, res) => {
+  res.json(await gestorRetos.estadoMotor());
 });
 
 // SPA fallback
@@ -73,6 +111,13 @@ function generarCodigoSala() {
   for (let i = 0; i < 4; i++) codigo += letras[Math.floor(Math.random() * letras.length)];
   codigo += '-';
   for (let i = 0; i < 4; i++) codigo += nums[Math.floor(Math.random() * nums.length)];
+  return codigo;
+}
+
+// Código que no esté en uso ni por un quiz ni por un reto
+function codigoLibre() {
+  let codigo = generarCodigoSala();
+  while (salas.has(codigo) || gestorRetos.existe(codigo)) codigo = generarCodigoSala();
   return codigo;
 }
 
@@ -217,6 +262,7 @@ function salaDeAdmin(socket) {
 // --- Socket.io ---
 io.on('connection', (socket) => {
   console.log(`[Socket] Conectado: ${socket.id}`);
+  gestorRetos.registrarSocket(socket);
 
   // Admin crea sala
   socket.on('admin:crear-sala', (data, callback) => {
@@ -233,8 +279,7 @@ io.on('connection', (socket) => {
       if (callback) callback({ ok: false, mensaje: 'Selecciona al menos una pregunta' });
       return;
     }
-    let codigo = generarCodigoSala();
-    while (salas.has(codigo)) codigo = generarCodigoSala();
+    const codigo = codigoLibre();
 
     const sala = {
       codigo,
@@ -265,6 +310,9 @@ io.on('connection', (socket) => {
   // Estudiante se une
   socket.on('estudiante:unirse', (data, callback) => {
     const { nombre, codigoEstudiante, codigoSala } = data || {};
+
+    // Si el código es de un reto de programación, lo atiende el módulo de retos
+    if (gestorRetos.existe(codigoSala)) return gestorRetos.unirse(socket, data, callback);
 
     if (typeof nombre !== 'string' || typeof codigoEstudiante !== 'string' ||
         !nombre.trim() || !codigoEstudiante.trim()) {

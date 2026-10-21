@@ -22,6 +22,16 @@ const routes = [
     component: () => import('./views/VistaAdmin.vue')
   },
   {
+    path: '/reto',
+    name: 'reto',
+    component: () => import('./views/VistaReto.vue')
+  },
+  {
+    path: '/admin/retos',
+    name: 'admin-retos',
+    component: () => import('./views/VistaAdminRetos.vue')
+  },
+  {
     path: '/:pathMatch(.*)*',
     redirect: '/'
   }
