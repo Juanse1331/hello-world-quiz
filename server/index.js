@@ -244,7 +244,8 @@ io.on('connection', (socket) => {
       preguntaActualIdx: 0,
       estado: 'esperando', // esperando | en-curso | terminado
       timerActivo: !!timerActivo,
-      segundosPorPregunta: Math.min(120, Math.max(5, parseInt(segundosPorPregunta) || 30)),
+      // Entre 5 segundos y 10 minutos por pregunta
+      segundosPorPregunta: Math.min(600, Math.max(5, parseInt(segundosPorPregunta) || 30)),
       timerInterval: null,
       tiempoRestante: 0,
       tiempoAgotado: false,

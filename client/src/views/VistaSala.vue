@@ -56,7 +56,7 @@
             ></div>
           </div>
           <span class="timer-texto" :class="{ 'urgente': state.tiempoRestante <= 5 }">
-            {{ state.tiempoRestante }}s
+            {{ formatoTiempo(state.tiempoRestante) }}
           </span>
         </div>
       </div>
@@ -132,6 +132,11 @@ const tieneCodigoEnunciado = computed(() => {
   const tipo = state.preguntaActual?.tipo
   return ['IMP', 'ERR', 'COMP', 'DF'].includes(tipo)
 })
+
+function formatoTiempo(seg) {
+  const s = Math.max(0, parseInt(seg) || 0)
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+}
 
 function nivelLabel(nivel) {
   return { facil: 'Fácil', medio: 'Medio', dificil: 'Difícil' }[nivel] || nivel

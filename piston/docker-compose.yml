@@ -1,0 +1,15 @@
+# Piston: motor que compila y ejecuta el código de los estudiantes dentro de una caja aislada (sandbox).
+# Solo escucha en 127.0.0.1: los estudiantes NO pueden llegar a él directamente; solo el servidor del quiz.
+services:
+  piston:
+    image: ghcr.io/engineer-man/piston
+    container_name: piston_api
+    restart: unless-stopped
+    privileged: true                       # Piston lo necesita para crear sus sandboxes (usa cgroups v2)
+    ports:
+      - "127.0.0.1:2000:2000"              # ⚠️ no cambiar a "2000:2000" (quedaría expuesto a la red)
+    volumes:
+      - piston_paquetes:/piston/packages   # aquí quedan instalados Python y C++ (persisten al reiniciar)
+
+volumes:
+  piston_paquetes:

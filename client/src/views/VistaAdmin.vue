@@ -43,7 +43,8 @@
           </label>
           <div v-if="timerActivo" class="timer-segundos">
             <label>Segundos por pregunta:</label>
-            <input v-model.number="segundosPorPregunta" type="number" min="15" max="120" class="form-control" style="width: 80px; display: inline-block;" />
+            <input v-model.number="segundosPorPregunta" type="number" min="5" max="600" step="5" class="form-control" style="width: 90px; display: inline-block;" />
+            <span class="timer-equivalente">= {{ formatoTiempo(segundosPorPregunta) }} min (máx. 10:00)</span>
           </div>
         </div>
       </div>
@@ -58,7 +59,15 @@
             <button v-for="tipo in ['todos', 'SM', 'VF', 'COMP', 'IMP', 'ERR', 'DF']" :key="tipo" class="btn btn-sm" :class="filtroTipo === tipo ? 'btn-primary' : 'btn-secondary'" @click="filtroTipo = tipo">{{ tipoLabel(tipo) }}</button>
           </div>
           <div class="filtro-grupo">
-            <button class="btn btn-sm btn-secondary" @click="seleccionarNivel">Seleccionar nivel actual</button>
+            <span class="filtro-label">Tema:</span>
+            <select v-model="filtroTema" class="form-control filtro-select">
+              <option value="todos">Todos los temas ({{ banco.length }})</option>
+              <option v-for="t in temas" :key="t.nombre" :value="t.nombre">{{ t.nombre }} ({{ t.cantidad }})</option>
+            </select>
+          </div>
+          <div class="filtro-grupo">
+            <button class="btn btn-sm btn-secondary" @click="seleccionarNivel">Seleccionar todas las filtradas</button>
+            <button v-if="hayFiltros" class="btn btn-sm btn-secondary" @click="quitarFiltros">Quitar filtros</button>
             <button class="btn btn-sm btn-secondary" @click="limpiarSeleccion">Limpiar</button>
           </div>
         </div>
@@ -70,11 +79,12 @@
             <div v-for="p in preguntasFiltradas" :key="p.id" class="pregunta-item" :class="{ seleccionada: estaSeleccionada(p.id) }" @click="togglePregunta(p)">
               <input type="checkbox" :checked="estaSeleccionada(p.id)" class="pregunta-check" />
               <div class="pregunta-info">
-                <div class="pregunta-preview">{{ p.enunciado.substring(0, 80) }}{{ p.enunciado.length > 80 ? '...' : '' }}</div>
+                <div class="pregunta-preview">{{ p.enunciado }}</div>
                 <div class="pregunta-meta">
                   <span class="badge" :class="'badge-' + p.nivel">{{ nivelLabel(p.nivel) }}</span>
                   <span class="badge badge-tipo">{{ tipoLabel(p.tipo) }}</span>
                   <span class="badge" style="background:#E9EDF5; color:#202C45;">{{ p.puntos }} pts</span>
+                  <span v-if="p.tema" class="badge badge-tema">{{ p.tema }}</span>
                 </div>
               </div>
             </div>
@@ -85,11 +95,24 @@
           <div v-if="seleccionadas.length === 0" class="empty-state">
             <p>Haz clic en preguntas para agregarlas</p>
           </div>
-          <div v-else class="preguntas-lista seleccionadas-lista">
-            <div v-for="(p, idx) in seleccionadas" :key="p.id" class="pregunta-item seleccionada">
+          <p v-if="seleccionadas.length > 1" class="ayuda-arrastre"><Icon name="grip-vertical" :size="14" /> Arrastra una pregunta hacia arriba o abajo para cambiar el orden</p>
+          <div v-if="seleccionadas.length > 0" class="preguntas-lista seleccionadas-lista" :class="{ 'arrastrando-activo': arrastrandoIdx !== null }">
+            <div
+              v-for="(p, idx) in seleccionadas"
+              :key="p.id"
+              class="pregunta-item seleccionada arrastrable"
+              :class="{ arrastrando: arrastrandoIdx === idx }"
+              draggable="true"
+              @dragstart="iniciarArrastre(idx, $event)"
+              @dragenter.prevent="arrastrarSobre(idx)"
+              @dragover.prevent
+              @drop.prevent
+              @dragend="terminarArrastre"
+            >
+              <span class="agarre" title="Arrastrar"><Icon name="grip-vertical" :size="16" /></span>
               <span class="orden-num">{{ idx + 1 }}</span>
               <div class="pregunta-info">
-                <div class="pregunta-preview">{{ p.enunciado.substring(0, 60) }}...</div>
+                <div class="pregunta-preview">{{ p.enunciado }}</div>
                 <div class="pregunta-meta">
                   <span class="badge" :class="'badge-' + p.nivel">{{ nivelLabel(p.nivel) }}</span>
                   <span class="badge badge-tipo">{{ tipoLabel(p.tipo) }}</span>
@@ -152,11 +175,15 @@
               <div class="timer-bar-mini">
                 <div class="timer-fill-mini" :style="{ width: timerPorcentajeAdmin + '%' }" :class="{ urgente: state.tiempoRestante <= 5 }"></div>
               </div>
-              <span :class="{ 'urgente-text': state.tiempoRestante <= 5 }">{{ state.tiempoRestante }}s</span>
+              <span :class="{ 'urgente-text': state.tiempoRestante <= 5 }">{{ formatoTiempo(state.tiempoRestante) }}</span>
+            </div>
+            <div v-if="preguntaActualMonitor && !quizTerminado" class="respondieron-chip" :class="{ completo: todosRespondieron }">
+              <Icon :name="todosRespondieron ? 'check-circle' : 'users'" :size="16" />
+              Respondieron {{ respondieronActual }} / {{ participantesActivos.length }}
             </div>
           </div>
           <div class="control-botones">
-            <button class="btn btn-primary" @click="siguientePregunta" :disabled="quizTerminado">
+            <button class="btn btn-primary" :class="{ 'btn-destacado': todosRespondieron && !quizTerminado }" @click="siguientePregunta" :disabled="quizTerminado || avanzando">
               <template v-if="esUltimaPregunta"><Icon name="square" :size="16" /> Terminar Quiz</template>
               <template v-else><Icon name="skip-forward" :size="16" /> Siguiente pregunta</template>
             </button>
@@ -164,6 +191,18 @@
               Terminar ahora
             </button>
           </div>
+        </div>
+        <div v-if="todosRespondieron && !quizTerminado" class="aviso-todos fade-in">
+          <Icon name="check-circle" :size="22" />
+          <span>
+            <strong>¡Todos respondieron!</strong>
+            <template v-if="state.tiempoRestante > 0"> No hace falta esperar a que se acabe el tiempo:</template>
+            puedes {{ esUltimaPregunta ? 'terminar el quiz y ver los resultados' : 'pasar a la siguiente pregunta' }}.
+          </span>
+          <button class="btn btn-success" @click="siguientePregunta" :disabled="avanzando">
+            <template v-if="esUltimaPregunta"><Icon name="square" :size="16" /> Terminar Quiz</template>
+            <template v-else><Icon name="skip-forward" :size="16" /> Siguiente pregunta</template>
+          </button>
         </div>
         <div class="card" style="margin-bottom: 16px; overflow-x: auto;">
           <table class="monitor-tabla">
@@ -259,6 +298,9 @@ const timerActivo = ref(false)
 const segundosPorPregunta = ref(30)
 const filtroNivel = ref('todos')
 const filtroTipo = ref('todos')
+const filtroTema = ref('todos')
+const arrastrandoIdx = ref(null) // posición de la pregunta que se está arrastrando
+const avanzando = ref(false) // evita saltar dos preguntas con doble clic
 const seleccionadas = ref([])
 const errorSala = ref('')
 const cargandoSala = ref(false)
@@ -284,6 +326,7 @@ onMounted(async () => {
   state.socket?.on('sala:nueva-pregunta', (p) => {
     preguntaActualMonitor.value = p
     totalSegundosAdmin.value = segundosPorPregunta.value
+    avanzando.value = false
   })
   state.socket?.on('sala:timer-tick', ({ tiempoRestante }) => {
     if (totalSegundosAdmin.value < tiempoRestante) totalSegundosAdmin.value = tiempoRestante
@@ -296,9 +339,29 @@ const preguntasFiltradas = computed(() => {
   return banco.value.filter(p => {
     const passNivel = filtroNivel.value === 'todos' || p.nivel === filtroNivel.value
     const passTipo = filtroTipo.value === 'todos' || p.tipo === filtroTipo.value
-    return passNivel && passTipo
+    const passTema = filtroTema.value === 'todos' || p.tema === filtroTema.value
+    return passNivel && passTipo && passTema
   })
 })
+// Lista de temas del banco (sin repetir), ordenada por número de sección, con su cantidad de preguntas
+const temas = computed(() => {
+  const conteo = {}
+  banco.value.forEach(p => { if (p.tema) conteo[p.tema] = (conteo[p.tema] || 0) + 1 })
+  return Object.keys(conteo)
+    .sort((a, b) => a.localeCompare(b, 'es', { numeric: true }))
+    .map(nombre => ({ nombre, cantidad: conteo[nombre] }))
+})
+const hayFiltros = computed(() => filtroNivel.value !== 'todos' || filtroTipo.value !== 'todos' || filtroTema.value !== 'todos')
+// Monitor: cuántos estudiantes conectados ya respondieron la pregunta actual
+const participantesActivos = computed(() => state.participantes.filter(p => !p.desconectado))
+const respondieronActual = computed(() => {
+  if (!preguntaActualMonitor.value) return 0
+  const idx = preguntaActualMonitor.value.numero - 1
+  return participantesActivos.value.filter(p => (p.respuestas || [])[idx] !== undefined).length
+})
+const todosRespondieron = computed(() =>
+  participantesActivos.value.length > 0 && respondieronActual.value === participantesActivos.value.length
+)
 const totalPuntos = computed(() => seleccionadas.value.reduce((a, p) => a + p.puntos, 0))
 const participantesOrdenados = computed(() => [...state.participantes].sort((a, b) => (b.puntaje || 0) - (a.puntaje || 0)))
 const esUltimaPregunta = computed(() => {
@@ -341,6 +404,13 @@ function cerrarSesion() {
   autenticado.value = false
   nuevaSesion()
 }
+function formatoTiempo(seg) {
+  const s = Math.max(0, parseInt(seg) || 0)
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+}
+function quitarFiltros() {
+  filtroNivel.value = 'todos'; filtroTipo.value = 'todos'; filtroTema.value = 'todos'
+}
 function nivelLabel(n) {
   return { todos: 'Todos', facil: 'Fácil', medio: 'Medio', dificil: 'Difícil' }[n] || n
 }
@@ -370,6 +440,21 @@ function moverAbajo(idx) {
   seleccionadas.value[idx] = tmp
 }
 function quitarPregunta(idx) { seleccionadas.value.splice(idx, 1) }
+// --- Arrastrar y soltar para ordenar las seleccionadas ---
+function iniciarArrastre(idx, e) {
+  arrastrandoIdx.value = idx
+  e.dataTransfer.effectAllowed = 'move'
+  e.dataTransfer.setData('text/plain', String(idx)) // Firefox lo necesita para permitir arrastrar
+}
+// Al pasar sobre otra pregunta, la arrastrada se mueve a esa posición (se ve en vivo)
+function arrastrarSobre(idx) {
+  const desde = arrastrandoIdx.value
+  if (desde === null || desde === idx) return
+  const [pregunta] = seleccionadas.value.splice(desde, 1)
+  seleccionadas.value.splice(idx, 0, pregunta)
+  arrastrandoIdx.value = idx
+}
+function terminarArrastre() { arrastrandoIdx.value = null }
 
 async function crearSala() {
   errorSala.value = ''
@@ -414,7 +499,9 @@ function siguientePregunta() {
   if (esUltimaPregunta.value) {
     state.socket.emit('admin:terminar-quiz', {}, (res) => { if (res.ok) quizTerminado.value = true })
   } else {
-    state.socket.emit('admin:siguiente-pregunta', {})
+    if (avanzando.value) return
+    avanzando.value = true
+    state.socket.emit('admin:siguiente-pregunta', {}, () => { avanzando.value = false })
   }
 }
 function terminarQuizForzado() {
@@ -532,7 +619,11 @@ async function exportarExcel() {
 .pregunta-item:hover { border-color: var(--color-primary); background: rgba(32,44,69,0.03); }
 .pregunta-item.seleccionada { border-color: var(--color-primary); background: rgba(32,44,69,0.06); }
 .pregunta-check { flex-shrink: 0; accent-color: var(--color-primary); width: 16px; height: 16px; cursor: pointer; }
-.pregunta-preview { font-size: 13px; margin-bottom: 6px; }
+.pregunta-info { flex: 1; min-width: 0; }
+/* Vista previa en 2 líneas; al pasar el mouse se muestra la pregunta completa */
+.pregunta-preview { font-size: 13px; margin-bottom: 6px; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; word-break: break-word; }
+.pregunta-item:hover .pregunta-preview { display: block; -webkit-line-clamp: unset; line-clamp: unset; overflow: visible; white-space: pre-wrap; }
+.arrastrando-activo .pregunta-item:hover .pregunta-preview { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; white-space: normal; }
 .pregunta-meta { display: flex; gap: 4px; flex-wrap: wrap; }
 .orden-num { width: 24px; height: 24px; border-radius: 50%; background: var(--color-primary); color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; }
 .orden-controls { display: flex; gap: 4px; flex-shrink: 0; }
@@ -591,4 +682,18 @@ async function exportarExcel() {
 .medalla-1 { color: #8A94A6; }
 .medalla-2 { color: #B8651B; }
 .primer-lugar { background: rgba(255,215,0,0.1); font-weight: 700; }
+.timer-equivalente { font-size: 13px; color: var(--color-text-light); }
+.filtro-select { width: auto; min-width: 260px; max-width: 100%; padding: 6px 10px; font-size: 13px; }
+.badge-tema { background: #F1F3F8; color: var(--color-text-light); font-weight: 500; }
+.ayuda-arrastre { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--color-text-light); margin: -4px 0 8px; }
+.arrastrable { cursor: grab; }
+.arrastrable:active { cursor: grabbing; }
+.agarre { display: flex; align-items: center; align-self: center; color: var(--color-text-light); flex-shrink: 0; }
+.pregunta-item.arrastrando { opacity: 0.45; border-style: dashed; }
+.respondieron-chip { display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.15); padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: 600; }
+.respondieron-chip.completo { background: var(--color-success); }
+.aviso-todos { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; background: var(--color-success-light); color: var(--color-success); border: 1px solid var(--color-success); padding: 12px 16px; border-radius: var(--radius-md); margin-bottom: 16px; }
+.aviso-todos span { flex: 1; min-width: 200px; color: var(--color-text); }
+.btn-destacado { animation: pulso 1.4s ease-in-out infinite; }
+@keyframes pulso { 0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.7); } 50% { box-shadow: 0 0 0 6px rgba(255,255,255,0); } }
 </style>
