@@ -9,6 +9,7 @@
     "formato_entrada": "Una línea con dos enteros a y b separados por un espacio (-10^9 ≤ a, b ≤ 10^9).",
     "formato_salida": "Un único entero: el valor de a + b.",
     "limite_tiempo_ms": 2000,
+    "tiempo_minutos": 15,
     "plantilla": {
       "python": "a, b = map(int, input().split())\n# Escribe tu solución aquí\n",
       "cpp": "#include <iostream>\n#include <string>\nusing namespace std;\n\nint main() {\n    // Lee la entrada con cin y escribe la respuesta con cout\n    long long a, b;\n    cin >> a >> b;\n\n    return 0;\n}\n"
@@ -52,6 +53,7 @@
     "formato_entrada": "Una línea con un entero n (-10^9 ≤ n ≤ 10^9).",
     "formato_salida": "La palabra PAR si n es par, o IMPAR si no lo es (en mayúsculas).",
     "limite_tiempo_ms": 2000,
+    "tiempo_minutos": 15,
     "plantilla": {
       "python": "n = int(input())\n# Escribe tu solución aquí\n",
       "cpp": "#include <iostream>\n#include <string>\nusing namespace std;\n\nint main() {\n    // Lee la entrada con cin y escribe la respuesta con cout\n    long long n;\n    cin >> n;\n\n    return 0;\n}\n"
@@ -99,6 +101,7 @@
     "formato_entrada": "Una línea con tres enteros a, b y c separados por espacios (-10^6 ≤ a, b, c ≤ 10^6).",
     "formato_salida": "Un único entero: el mayor de los tres.",
     "limite_tiempo_ms": 2000,
+    "tiempo_minutos": 15,
     "plantilla": {
       "python": "a, b, c = map(int, input().split())\n# Escribe tu solución aquí\n",
       "cpp": "#include <iostream>\n#include <string>\nusing namespace std;\n\nint main() {\n    // Lee la entrada con cin y escribe la respuesta con cout\n    int a, b, c;\n    cin >> a >> b >> c;\n\n    return 0;\n}\n"
@@ -146,6 +149,7 @@
     "formato_entrada": "Una línea con un entero N (1 ≤ N ≤ 1 000 000).",
     "formato_salida": "Un único entero: la suma de los números de 1 a N.",
     "limite_tiempo_ms": 2000,
+    "tiempo_minutos": 20,
     "plantilla": {
       "python": "n = int(input())\n# Escribe tu solución aquí\n",
       "cpp": "#include <iostream>\n#include <string>\nusing namespace std;\n\nint main() {\n    // Lee la entrada con cin y escribe la respuesta con cout\n    long long n;\n    cin >> n;\n\n    return 0;\n}\n"
@@ -189,6 +193,7 @@
     "formato_entrada": "Una línea de texto (puede tener espacios), de máximo 1000 caracteres.",
     "formato_salida": "Un único entero: la cantidad de vocales del texto.",
     "limite_tiempo_ms": 2000,
+    "tiempo_minutos": 20,
     "plantilla": {
       "python": "texto = input()\n# Escribe tu solución aquí\n",
       "cpp": "#include <iostream>\n#include <string>\nusing namespace std;\n\nint main() {\n    // Lee la entrada con cin y escribe la respuesta con cout\n    string texto;\n    getline(cin, texto);\n\n    return 0;\n}\n"
@@ -232,6 +237,7 @@
     "formato_entrada": "Una línea con un entero N (1 ≤ N ≤ 100).",
     "formato_salida": "N líneas siguiendo las reglas.",
     "limite_tiempo_ms": 2000,
+    "tiempo_minutos": 20,
     "plantilla": {
       "python": "n = int(input())\n# Escribe tu solución aquí\n",
       "cpp": "#include <iostream>\n#include <string>\nusing namespace std;\n\nint main() {\n    // Lee la entrada con cin y escribe la respuesta con cout\n    int n;\n    cin >> n;\n\n    return 0;\n}\n"
@@ -275,6 +281,7 @@
     "formato_entrada": "Una línea con un entero N (2 ≤ N ≤ 1000).",
     "formato_salida": "Los primos entre 2 y N en orden creciente, separados por un espacio.",
     "limite_tiempo_ms": 2000,
+    "tiempo_minutos": 30,
     "plantilla": {
       "python": "n = int(input())\n# Escribe tu solución aquí\n",
       "cpp": "#include <iostream>\n#include <string>\nusing namespace std;\n\nint main() {\n    // Lee la entrada con cin y escribe la respuesta con cout\n    int n;\n    cin >> n;\n\n    return 0;\n}\n"
@@ -322,6 +329,7 @@
     "formato_entrada": "Una línea con un entero N (0 ≤ N ≤ 10^18), sin ceros a la izquierda.",
     "formato_salida": "SI si el número es palíndromo, o NO si no lo es.",
     "limite_tiempo_ms": 2000,
+    "tiempo_minutos": 30,
     "plantilla": {
       "python": "n = int(input())\n# Escribe tu solución aquí\n",
       "cpp": "#include <iostream>\n#include <string>\nusing namespace std;\n\nint main() {\n    // Lee la entrada con cin y escribe la respuesta con cout\n    long long n;\n    cin >> n;\n\n    return 0;\n}\n"

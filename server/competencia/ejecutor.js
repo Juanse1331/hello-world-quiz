@@ -12,6 +12,46 @@ const LENGUAJES = {
 
 const MEMORIA_MAX = 256 * 1024 * 1024 // 256 MB por ejecución
 
+// Python: el código del estudiante corre dentro de este envoltorio para que input("Ingrese un número")
+// NO imprima el mensaje (se mezclaría con la salida y la respuesta nunca coincidiría).
+// Los errores se muestran como si vinieran de main.py, con las líneas del estudiante.
+const ENVOLTORIO_PYTHON = `import builtins, linecache, os, sys, traceback
+_leer = builtins.input
+builtins.input = lambda *mensaje: _leer()
+with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'main.py'), encoding='utf-8') as _f:
+    _fuente = _f.read()
+linecache.cache['main.py'] = (len(_fuente), None, _fuente.splitlines(True), 'main.py')
+try:
+    exec(compile(_fuente, 'main.py', 'exec'), {'__name__': '__main__'})
+except SystemExit:
+    raise
+except BaseException as _e:
+    _pila = [f for f in traceback.extract_tb(_e.__traceback__) if f.filename == 'main.py']
+    if _pila:
+        print('Traceback (most recent call last):', file=sys.stderr)
+        print(''.join(traceback.format_list(_pila)), end='', file=sys.stderr)
+    print(''.join(traceback.format_exception_only(type(_e), _e)), end='', file=sys.stderr)
+    sys.exit(1)
+`
+
+function archivos(lenguaje, codigo) {
+  // Piston ejecuta el primer archivo: el envoltorio, que carga main.py (el código del estudiante)
+  if (lenguaje === 'python') return [{ name: '_juez.py', content: ENVOLTORIO_PYTHON }, { name: 'main.py', content: codigo }]
+  return [{ name: LENGUAJES[lenguaje].archivo, content: codigo }]
+}
+
+// Explicación en español para los errores más comunes de principiantes
+function pista(error) {
+  if (/EOFError/.test(error)) {
+    return '\n\n💡 Tu programa intentó leer más líneas de las que tiene la entrada. Revisa el formato de entrada: ' +
+      'si los datos vienen en UNA sola línea (por ejemplo "3 7"), léelos con un solo input(), así: a, b = map(int, input().split())'
+  }
+  if (/can only concatenate str|unsupported operand type.*'str'/.test(error)) {
+    return '\n\n💡 input() siempre devuelve texto. Para hacer cuentas conviértelo a número con int(...) o float(...).'
+  }
+  return ''
+}
+
 let versiones = null
 let versionesTs = 0
 
@@ -107,7 +147,7 @@ async function ejecutar({ lenguaje, codigo, entrada = '', limiteMs = 2000 }) {
       cuerpo: {
         language: cfg.piston,
         version,
-        files: [{ name: cfg.archivo, content: codigo }],
+        files: archivos(lenguaje, codigo),
         stdin: entrada.endsWith('\n') ? entrada : entrada + '\n',
         compile_timeout: 10000,
         run_timeout: limiteMs,
@@ -134,7 +174,7 @@ async function ejecutar({ lenguaje, codigo, entrada = '', limiteMs = 2000 }) {
     if (run.signal || run.code !== 0) {
       const msg = run.stderr || run.message ||
         (run.signal === 'SIGKILL' ? 'El programa fue detenido (posible exceso de memoria).' : `El programa terminó con error (código ${run.code}).`)
-      return { estado: 'EJECUCION', salida: run.stdout || '', error: limpiarMensaje(msg), ms }
+      return { estado: 'EJECUCION', salida: run.stdout || '', error: limpiarMensaje(msg) + pista(msg), ms }
     }
     return { estado: 'OK', salida: run.stdout || '', error: '', ms }
   } catch (e) {
@@ -142,4 +182,4 @@ async function ejecutar({ lenguaje, codigo, entrada = '', limiteMs = 2000 }) {
   }
 }
 
-module.exports = { ejecutar, estadoMotor, LENGUAJES }
+module.exports = { ejecutar, estadoMotor, LENGUAJES, ENVOLTORIO_PYTHON }

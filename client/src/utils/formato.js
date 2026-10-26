@@ -1,4 +1,4 @@
-// Utilidades de formato compartidas por las vistas del reto
+// Utilidades de formato compartidas por las vistas de la competencia
 
 // 125000 ms -> "2:05" ; 3725000 ms -> "1:02:05"
 export function formatoReloj(ms) {
@@ -12,6 +12,10 @@ export function formatoReloj(ms) {
 
 export function nivelLabel(nivel) {
   return { facil: 'Fácil', medio: 'Medio', dificil: 'Difícil' }[nivel] || nivel
+}
+
+export function tipoLabel(tipo) {
+  return { SM: 'Sel. múltiple', VF: 'V / F', COMP: 'Completar', IMP: '¿Qué imprime?', ERR: 'Encontrar el error', DF: 'Diagrama' }[tipo] || tipo
 }
 
 export function lenguajeLabel(lenguaje) {

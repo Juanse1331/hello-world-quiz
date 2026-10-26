@@ -7,14 +7,9 @@ const routes = [
     component: () => import('./views/VistaIngreso.vue')
   },
   {
-    path: '/sala',
-    name: 'sala',
-    component: () => import('./views/VistaSala.vue')
-  },
-  {
-    path: '/resultados',
-    name: 'resultados',
-    component: () => import('./views/VistaResultadosEstudiante.vue')
+    path: '/competencia',
+    name: 'competencia',
+    component: () => import('./views/VistaCompetencia.vue')
   },
   {
     path: '/admin',
@@ -22,14 +17,10 @@ const routes = [
     component: () => import('./views/VistaAdmin.vue')
   },
   {
-    path: '/reto',
-    name: 'reto',
-    component: () => import('./views/VistaReto.vue')
-  },
-  {
-    path: '/admin/retos',
-    name: 'admin-retos',
-    component: () => import('./views/VistaAdminRetos.vue')
+    // El servidor devuelve esta página (401) si alguien abre la API en el navegador
+    path: '/api/:pathMatch(.*)*',
+    name: 'no-autorizado',
+    component: () => import('./views/VistaNoAutorizado.vue')
   },
   {
     path: '/:pathMatch(.*)*',

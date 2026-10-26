@@ -55,31 +55,37 @@ async function correrCasos({ ejecutar, lenguaje, codigo, casos, limiteMs, parale
 
 /**
  * Resume una evaluación en un veredicto.
+ * Los primeros 'nEjemplos' casos son los ejemplos visibles: deben pasar para ACEPTADO, pero NO dan puntos.
+ * Solo cuentan las pruebas ocultas, así un programa que imprime fijo el resultado del ejemplo saca 0.
+ * (Si el problema no tiene pruebas ocultas, cuentan los ejemplos.)
  *   ACEPTADO    todas las pruebas correctas
- *   PARCIAL     al menos una correcta
- *   INCORRECTO  ninguna correcta (respuesta equivocada)
- *   TIEMPO      ninguna correcta y alguna superó el tiempo
- *   EJECUCION   ninguna correcta y el programa falló al correr
+ *   PARCIAL     al menos una prueba oculta correcta
+ *   INCORRECTO  ninguna oculta correcta (respuesta equivocada)
+ *   TIEMPO      ninguna oculta correcta y alguna superó el tiempo
+ *   EJECUCION   ninguna oculta correcta y el programa falló al correr
  *   COMPILACION no compiló
  *   INTERNO     falló el motor (no es culpa del estudiante)
  */
-function resumir(evaluacion, totalCasos) {
+function resumir(evaluacion, totalCasos, nEjemplos = 0) {
+  const soloOcultas = nEjemplos < totalCasos
+  const total = soloOcultas ? totalCasos - nEjemplos : totalCasos
   if (evaluacion.internoError) {
-    return { veredicto: 'INTERNO', pasadas: 0, total: totalCasos, mensaje: evaluacion.internoError, conteo: {} }
+    return { veredicto: 'INTERNO', pasadas: 0, total, mensaje: evaluacion.internoError, conteo: {} }
   }
   if (evaluacion.compilacion !== null) {
-    return { veredicto: 'COMPILACION', pasadas: 0, total: totalCasos, mensaje: evaluacion.compilacion, conteo: {} }
+    return { veredicto: 'COMPILACION', pasadas: 0, total, mensaje: evaluacion.compilacion, conteo: {} }
   }
   const casos = evaluacion.casos
+  const calificados = soloOcultas ? casos.slice(nEjemplos) : casos
   const conteo = {
-    correctas: casos.filter(c => c.ok).length,
+    correctas: calificados.filter(c => c.ok).length,
     incorrectas: casos.filter(c => !c.ok && c.estado === 'OK').length,
     tiempo: casos.filter(c => c.estado === 'TIEMPO').length,
     ejecucion: casos.filter(c => c.estado === 'EJECUCION').length
   }
   const pasadas = conteo.correctas
   let veredicto
-  if (pasadas === casos.length) veredicto = 'ACEPTADO'
+  if (casos.every(c => c.ok)) veredicto = 'ACEPTADO'
   else if (pasadas > 0) veredicto = 'PARCIAL'
   else if (conteo.ejecucion > 0) veredicto = 'EJECUCION'
   else if (conteo.tiempo > 0) veredicto = 'TIEMPO'
@@ -87,7 +93,7 @@ function resumir(evaluacion, totalCasos) {
 
   // Primer mensaje de error útil (sin revelar entradas ocultas)
   const conError = casos.find(c => !c.ok && c.error)
-  return { veredicto, pasadas, total: casos.length, mensaje: conError ? conError.error : '', conteo }
+  return { veredicto, pasadas, total, mensaje: conError ? conError.error : '', conteo }
 }
 
 module.exports = { normalizar, salidasIguales, correrCasos, resumir, enParalelo }

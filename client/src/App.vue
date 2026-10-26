@@ -3,8 +3,8 @@
 </template>
 
 <script setup>
-import { useQuiz } from './composables/useQuiz'
+import { useSocket } from './composables/useSocket'
 
-const { conectar } = useQuiz()
+const { conectar } = useSocket()
 conectar()
 </script>

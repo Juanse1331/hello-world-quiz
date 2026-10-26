@@ -1,27 +1,24 @@
-﻿<template>
+<template>
   <div class="admin-page">
     <header class="app-header">
       <img src="../assets/logo-aceis.png" alt="ACEIS" class="logo" />
-      <h1>Hello World Quiz · Admin</h1>
-      <nav class="nav-modos" v-if="autenticado">
-        <router-link to="/admin" class="nav-modo activo">Quiz</router-link>
-        <router-link to="/admin/retos" class="nav-modo">Reto de programación</router-link>
-      </nav>
+      <h1>Hello World · Admin</h1>
       <div class="header-info" v-if="autenticado">
-        <span class="nombre-chip">Profesor</span>
-        <button class="btn btn-sm btn-secondary" @click="cerrarSesion">Cerrar sesión</button>
+        <button class="btn btn-sm btn-secondary" @click="cerrarSesion()">Cerrar sesión</button>
       </div>
     </header>
+
+    <!-- Login -->
     <div v-if="!autenticado" class="container-sm" style="padding-top: 80px;">
       <div class="card fade-in">
         <div class="card-header-aceis">
           <h2><Icon name="lock" :size="22" /> Acceso Administrador</h2>
-          <p>Ingresa la contraseña para continuar</p>
+          <p>Ingresa la contraseña para gestionar la competencia</p>
         </div>
         <form @submit.prevent="iniciarSesion" style="margin-top: 24px;">
           <div class="form-group">
-            <label>contraseña</label>
-            <input v-model="password" type="password" class="form-control" placeholder="contraseña admin" required autofocus />
+            <label>Contraseña</label>
+            <input v-model="password" type="password" class="form-control" placeholder="Contraseña admin" required autofocus />
           </div>
           <div v-if="errorLogin" class="alert alert-error">{{ errorLogin }}</div>
           <button type="submit" class="btn btn-primary btn-lg btn-block" :disabled="cargandoLogin">
@@ -29,358 +26,351 @@
           </button>
         </form>
         <div style="text-align:center; margin-top:16px;">
-          <router-link to="/" style="color: var(--color-text-light); font-size:13px;"><Icon name="arrow-left" :size="14" /> Volver al inicio</router-link>
+          <router-link to="/" class="texto-suave" style="font-size:13px;"><Icon name="arrow-left" :size="14" /> Volver al inicio</router-link>
         </div>
       </div>
     </div>
-    <div v-else-if="!salaActiva" class="container" style="padding-top: 24px;">
+
+    <!-- Configuración de una nueva competencia -->
+    <div v-else-if="!comp" class="container ancho" style="padding-top: 24px;">
       <div class="seccion-titulo">
-        <h2>Nueva sesión de quiz</h2>
-        <p>Selecciona las preguntas y configura el quiz</p>
+        <div>
+          <h2>Nueva competencia</h2>
+          <p>Elige las preguntas y los retos. A cada estudiante le saldrán mezclados en un orden distinto, cada uno con su propio tiempo.</p>
+        </div>
+        <div class="motor-chip" :class="motor ? (motor.ok ? 'ok' : 'mal') : ''">
+          <Icon name="cpu" :size="16" />
+          <template v-if="!motor">Revisando motor...</template>
+          <template v-else-if="motor.ok">Motor listo · Python {{ motor.lenguajes.python }} · C++ {{ motor.lenguajes.cpp }}</template>
+          <template v-else>Motor no disponible</template>
+          <button class="btn-link" @click="cargarMotor">Revisar</button>
+        </div>
       </div>
-      <div class="card config-timer">
-        <div class="timer-toggle">
-          <label class="switch-label">
-            <input type="checkbox" v-model="timerActivo" class="switch-input" />
-            <span class="switch-track"></span>
-            <span>Activar temporizador por pregunta</span>
+      <div v-if="motor && !motor.ok && seleccionProblemas.length" class="alert alert-error">
+        <strong>Piston no está listo:</strong> {{ motor.mensaje }}.
+        Abre Docker Desktop y ejecuta <code>npm run piston:up</code> en la carpeta del proyecto (ver README).
+      </div>
+
+      <!-- Preguntas -->
+      <div class="card" style="margin-bottom: 16px;">
+        <div class="lista-cabecera">
+          <h3>Preguntas <span class="count-badge">{{ seleccionPreguntas.length }} / {{ bancoPreguntas.length }}</span></h3>
+          <div class="lista-acciones">
+            <button class="btn btn-sm btn-secondary" @click="seleccionarFiltradas">Seleccionar las {{ preguntasFiltradas.length }} visibles</button>
+            <button class="btn btn-sm btn-secondary" @click="seleccionPreguntas = []">Limpiar</button>
+          </div>
+        </div>
+        <div class="filtros">
+          <select v-model="filtroNivel" class="form-control filtro">
+            <option value="todos">Todos los niveles</option>
+            <option v-for="n in ['facil', 'medio', 'dificil']" :key="n" :value="n">{{ nivelLabel(n) }}</option>
+          </select>
+          <select v-model="filtroTipo" class="form-control filtro">
+            <option value="todos">Todos los tipos</option>
+            <option v-for="t in ['SM', 'VF', 'IMP', 'ERR', 'COMP', 'DF']" :key="t" :value="t">{{ tipoLabel(t) }}</option>
+          </select>
+          <select v-model="filtroTema" class="form-control filtro filtro-tema">
+            <option value="todos">Todos los temas</option>
+            <option v-for="t in temas" :key="t" :value="t">{{ t }}</option>
+          </select>
+        </div>
+        <div class="items-lista">
+          <label v-for="q in preguntasFiltradas" :key="q.id" class="item" :class="{ seleccionado: seleccionPreguntas.includes(q.id) }">
+            <input type="checkbox" :value="q.id" v-model="seleccionPreguntas" />
+            <div class="item-info">
+              <div class="item-titulo">
+                <span class="badge" :class="'badge-' + q.nivel">{{ nivelLabel(q.nivel) }}</span>
+                <span class="badge badge-tipo">{{ tipoLabel(q.tipo) }}</span>
+                <span class="badge badge-tipo">{{ q.puntos }} pts</span>
+                <span class="badge badge-tiempo"><Icon name="clock" :size="11" /> {{ q.tiempoS }} s</span>
+              </div>
+              <div class="item-enunciado">{{ q.enunciado }}</div>
+              <div class="item-tema" v-if="q.tema">{{ q.tema }}</div>
+            </div>
           </label>
-          <div v-if="timerActivo" class="timer-segundos">
-            <label>Segundos por pregunta:</label>
-            <input v-model.number="segundosPorPregunta" type="number" min="5" max="600" step="5" class="form-control" style="width: 90px; display: inline-block;" />
-            <span class="timer-equivalente">= {{ formatoTiempo(segundosPorPregunta) }} min (máx. 10:00)</span>
-          </div>
+          <div v-if="preguntasFiltradas.length === 0" class="texto-suave" style="padding: 12px;">Ninguna pregunta coincide con los filtros.</div>
         </div>
       </div>
-      <div class="card filtros-card">
-        <div class="filtros-row">
-          <div class="filtro-grupo">
-            <span class="filtro-label">Nivel:</span>
-            <button v-for="nivel in ['todos', 'facil', 'medio', 'dificil']" :key="nivel" class="btn btn-sm" :class="filtroNivel === nivel ? 'btn-primary' : 'btn-secondary'" @click="filtroNivel = nivel">{{ nivelLabel(nivel) }}</button>
-          </div>
-          <div class="filtro-grupo">
-            <span class="filtro-label">Tipo:</span>
-            <button v-for="tipo in ['todos', 'SM', 'VF', 'COMP', 'IMP', 'ERR', 'DF']" :key="tipo" class="btn btn-sm" :class="filtroTipo === tipo ? 'btn-primary' : 'btn-secondary'" @click="filtroTipo = tipo">{{ tipoLabel(tipo) }}</button>
-          </div>
-          <div class="filtro-grupo">
-            <span class="filtro-label">Tema:</span>
-            <select v-model="filtroTema" class="form-control filtro-select">
-              <option value="todos">Todos los temas ({{ banco.length }})</option>
-              <option v-for="t in temas" :key="t.nombre" :value="t.nombre">{{ t.nombre }} ({{ t.cantidad }})</option>
-            </select>
-          </div>
-          <div class="filtro-grupo">
-            <button class="btn btn-sm btn-secondary" @click="seleccionarNivel">Seleccionar todas las filtradas</button>
-            <button v-if="hayFiltros" class="btn btn-sm btn-secondary" @click="quitarFiltros">Quitar filtros</button>
-            <button class="btn btn-sm btn-secondary" @click="limpiarSeleccion">Limpiar</button>
+
+      <!-- Retos de programación -->
+      <div class="card" style="margin-bottom: 16px;">
+        <div class="lista-cabecera">
+          <h3>Retos de programación <span class="count-badge">{{ seleccionProblemas.length }} / {{ bancoProblemas.length }}</span></h3>
+          <div class="lista-acciones">
+            <button class="btn btn-sm btn-secondary" @click="seleccionProblemas = bancoProblemas.map(p => p.id)">Seleccionar todos</button>
+            <button class="btn btn-sm btn-secondary" @click="seleccionProblemas = []">Limpiar</button>
           </div>
         </div>
-      </div>
-      <div class="config-grid">
-        <div class="card">
-          <h3 style="margin-bottom: 12px;">Banco de preguntas <span class="count-badge">{{ preguntasFiltradas.length }}</span></h3>
-          <div class="preguntas-lista">
-            <div v-for="p in preguntasFiltradas" :key="p.id" class="pregunta-item" :class="{ seleccionada: estaSeleccionada(p.id) }" @click="togglePregunta(p)">
-              <input type="checkbox" :checked="estaSeleccionada(p.id)" class="pregunta-check" />
-              <div class="pregunta-info">
-                <div class="pregunta-preview">{{ p.enunciado }}</div>
-                <div class="pregunta-meta">
-                  <span class="badge" :class="'badge-' + p.nivel">{{ nivelLabel(p.nivel) }}</span>
-                  <span class="badge badge-tipo">{{ tipoLabel(p.tipo) }}</span>
-                  <span class="badge" style="background:#E9EDF5; color:#202C45;">{{ p.puntos }} pts</span>
-                  <span v-if="p.tema" class="badge badge-tema">{{ p.tema }}</span>
-                </div>
+        <div class="items-lista">
+          <label v-for="p in bancoProblemas" :key="p.id" class="item" :class="{ seleccionado: seleccionProblemas.includes(p.id) }">
+            <input type="checkbox" :value="p.id" v-model="seleccionProblemas" />
+            <div class="item-info">
+              <div class="item-titulo">
+                <strong>{{ p.titulo }}</strong>
+                <span class="badge" :class="'badge-' + p.nivel">{{ nivelLabel(p.nivel) }}</span>
+                <span class="badge badge-tipo">{{ p.puntos }} pts</span>
+                <span class="badge badge-tiempo"><Icon name="clock" :size="11" /> {{ p.tiempoMin }} min</span>
+                <span class="badge badge-tema">{{ p.ejemplos.length }} ejemplo(s) + {{ p.pruebasOcultas }} ocultas</span>
               </div>
+              <div class="item-enunciado">{{ p.enunciado }}</div>
+              <div class="item-tema" v-if="p.tema">{{ p.tema }}</div>
+            </div>
+          </label>
+        </div>
+        <div v-if="seleccionProblemas.length" class="config-retos">
+          <div class="config-campo">
+            <label>Intentos fallidos por reto</label>
+            <input v-model.number="intentosMax" type="number" min="0" max="20" class="form-control" />
+            <small>0 = ilimitados</small>
+          </div>
+          <div class="config-campo">
+            <label>Lenguajes permitidos</label>
+            <div class="checks">
+              <label><input type="checkbox" value="python" v-model="lenguajesSel" /> Python</label>
+              <label><input type="checkbox" value="cpp" v-model="lenguajesSel" /> C++</label>
             </div>
           </div>
         </div>
-        <div class="card">
-          <h3 style="margin-bottom: 12px;">Seleccionadas <span class="count-badge">{{ seleccionadas.length }}</span></h3>
-          <div v-if="seleccionadas.length === 0" class="empty-state">
-            <p>Haz clic en preguntas para agregarlas</p>
-          </div>
-          <p v-if="seleccionadas.length > 1" class="ayuda-arrastre"><Icon name="grip-vertical" :size="14" /> Arrastra una pregunta hacia arriba o abajo para cambiar el orden</p>
-          <div v-if="seleccionadas.length > 0" class="preguntas-lista seleccionadas-lista" :class="{ 'arrastrando-activo': arrastrandoIdx !== null }">
-            <div
-              v-for="(p, idx) in seleccionadas"
-              :key="p.id"
-              class="pregunta-item seleccionada arrastrable"
-              :class="{ arrastrando: arrastrandoIdx === idx }"
-              draggable="true"
-              @dragstart="iniciarArrastre(idx, $event)"
-              @dragenter.prevent="arrastrarSobre(idx)"
-              @dragover.prevent
-              @drop.prevent
-              @dragend="terminarArrastre"
-            >
-              <span class="agarre" title="Arrastrar"><Icon name="grip-vertical" :size="16" /></span>
-              <span class="orden-num">{{ idx + 1 }}</span>
-              <div class="pregunta-info">
-                <div class="pregunta-preview">{{ p.enunciado }}</div>
-                <div class="pregunta-meta">
-                  <span class="badge" :class="'badge-' + p.nivel">{{ nivelLabel(p.nivel) }}</span>
-                  <span class="badge badge-tipo">{{ tipoLabel(p.tipo) }}</span>
-                </div>
-              </div>
-              <div class="orden-controls">
-                <button @click="moverArriba(idx)" :disabled="idx === 0" class="btn-orden" aria-label="Subir"><Icon name="chevron-up" :size="14" /></button>
-                <button @click="moverAbajo(idx)" :disabled="idx === seleccionadas.length - 1" class="btn-orden" aria-label="Bajar"><Icon name="chevron-down" :size="14" /></button>
-                <button @click="quitarPregunta(idx)" class="btn-orden btn-quitar" aria-label="Quitar"><Icon name="x" :size="14" /></button>
-              </div>
-            </div>
-          </div>
-          <div class="seleccionadas-footer">
-            <div class="total-puntos">Puntos base: <strong>{{ totalPuntos }}</strong> (hasta +50% por rapidez)</div>
-            <button class="btn btn-primary btn-lg btn-block" :disabled="seleccionadas.length === 0 || cargandoSala" @click="crearSala">
-              {{ cargandoSala ? 'Creando sala...' : 'Crear sala' }}
-            </button>
-            <div v-if="errorSala" class="alert alert-error" style="margin-top: 8px;">{{ errorSala }}</div>
-          </div>
+      </div>
+
+      <div class="card crear-footer">
+        <span class="texto-suave">
+          <strong>{{ seleccionPreguntas.length }}</strong> preguntas + <strong>{{ seleccionProblemas.length }}</strong> retos ·
+          Puntos posibles: <strong>{{ puntosPosibles }}</strong> ·
+          Tiempo máximo por estudiante: <strong>{{ formatoReloj(tiempoMaximoMs) }}</strong>
+        </span>
+        <button class="btn btn-primary btn-lg" :disabled="!puedeCrear || cargandoCrear" @click="crear">
+          <Icon name="play" :size="18" /> {{ cargandoCrear ? 'Creando...' : 'Crear competencia' }}
+        </button>
+      </div>
+      <div v-if="errorCrear" class="alert alert-error" style="margin-top: 12px;">{{ errorCrear }}</div>
+    </div>
+
+    <!-- Sala de espera -->
+    <div v-else-if="comp.estado === 'esperando'" class="container" style="padding-top: 24px;">
+      <div class="card texto-centro fade-in">
+        <div class="codigo-label">Código para compartir con los estudiantes</div>
+        <div class="codigo-valor">{{ comp.codigo }}</div>
+        <div class="resumen-config">
+          <span><Icon name="book" :size="14" /> {{ comp.preguntas.length }} preguntas</span>
+          <span v-if="comp.problemas.length"><Icon name="code" :size="14" /> {{ comp.problemas.length }} retos</span>
+          <span v-if="comp.problemas.length"><Icon name="alert-triangle" :size="14" /> {{ comp.intentosMax || '∞' }} intentos fallidos</span>
+          <span v-if="comp.problemas.length">{{ comp.lenguajes.map(lenguajeLabel).join(' · ') }}</span>
+        </div>
+        <div class="count-grande">{{ comp.ranking.length }}</div>
+        <div class="texto-suave">estudiantes conectados</div>
+        <div class="sala-acciones">
+          <button class="btn btn-success btn-lg" :disabled="comp.ranking.length === 0" @click="iniciar">
+            <Icon name="play" :size="18" /> Iniciar competencia
+          </button>
+          <button class="btn btn-secondary" @click="nueva">Cancelar</button>
+        </div>
+        <div v-if="comp.ranking.length" class="participantes-chips">
+          <span v-for="f in comp.ranking" :key="f.codigoEstudiante" class="chip-participante" :class="{ off: !f.conectado }">
+            <strong>{{ f.nombre }}</strong> {{ f.codigoEstudiante }}
+          </span>
         </div>
       </div>
     </div>
-    <div v-else class="container" style="padding-top: 24px;">
-      <div class="card sala-Código-card" v-if="!quizIniciado">
-        <div class="sala-Código-display">
-          <div class="sala-Código-label">Código de sala para compartir</div>
-          <div class="sala-Código-valor">{{ codigoSalaActiva }}</div>
-          <p class="sala-Código-hint">Los estudiantes deben ingresar este código en la pantalla de ingreso</p>
+
+    <!-- Monitor en vivo y resultados -->
+    <div v-else class="container ancho" style="padding-top: 24px;">
+      <div class="monitor-barra">
+        <div class="monitor-info">
+          <span class="sala-badge">{{ comp.codigo }}</span>
+          <span v-if="comp.estado === 'en-curso'" class="reloj-grande"><Icon name="clock" :size="20" /> {{ formatoReloj(transcurridoMs) }}</span>
+          <span v-else class="reloj-grande"><Icon name="trophy" :size="20" /> Competencia terminada</span>
+          <span class="dato"><Icon name="users" :size="15" /> {{ conectados }} / {{ comp.ranking.length }} conectados</span>
+          <span class="dato"><Icon name="check-circle" :size="15" /> {{ terminaron }} terminaron</span>
+          <span v-if="comp.problemas.length" class="dato"><Icon name="send" :size="15" /> {{ comp.totalEnvios }} envíos</span>
+          <span v-if="comp.cola.enEspera > 0" class="dato"><Icon name="cpu" :size="15" /> {{ comp.cola.enEspera }} en cola</span>
         </div>
-        <div class="sala-info">
-          <div class="participantes-count">
-            <span class="count-grande">{{ state.participantes.length }}</span>
-            <span>participantes conectados</span>
+        <div class="monitor-botones">
+          <button v-if="comp.estado === 'en-curso'" class="btn btn-sm btn-danger" @click="terminar"><Icon name="square" :size="14" /> Terminar</button>
+          <template v-else>
+            <button class="btn btn-sm btn-success" @click="exportarExcel"><Icon name="download" :size="14" /> Exportar Excel</button>
+            <button class="btn btn-sm btn-secondary" @click="nueva">Nueva competencia</button>
+          </template>
+        </div>
+      </div>
+
+      <div v-if="comp.estado === 'terminado' && comp.ranking.length" class="card fade-in" style="margin-bottom: 16px;">
+        <Podio :resultados="resultadosPodio" />
+      </div>
+
+      <div class="monitor-grid" :class="{ 'sin-feed': !comp.problemas.length }">
+        <div class="card tabla-card">
+          <h3 class="tabla-titulo">Ranking en vivo</h3>
+          <div class="tabla-scroll">
+            <table class="tabla-ranking">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Estudiante</th>
+                  <th>Progreso</th>
+                  <th v-if="comp.preguntas.length" class="th-centro">Preguntas<small>{{ comp.preguntas.length }}</small></th>
+                  <th v-for="(p, i) in comp.problemas" :key="p.id" class="th-centro" :title="p.titulo">R{{ i + 1 }}<small>{{ p.puntos }}</small></th>
+                  <th>Puntos</th>
+                  <th>Tiempo</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="f in comp.ranking" :key="f.codigoEstudiante" :class="{ off: !f.conectado && comp.estado === 'en-curso' }">
+                  <td class="td-pos">
+                    <Icon v-if="comp.estado === 'terminado' && f.posicion <= 3" name="medal" :size="18" :class="'medalla-' + f.posicion" />
+                    <template v-else>{{ f.posicion }}</template>
+                  </td>
+                  <td class="td-nombre">
+                    <div>{{ f.nombre }}</div>
+                    <div class="sub">
+                      {{ f.codigoEstudiante }}
+                      <span v-if="!f.conectado && comp.estado === 'en-curso'" class="tag tag-off">desconectado</span>
+                      <span v-if="f.salidasPestana" class="tag tag-aviso" :title="'Salió de la pestaña ' + f.salidasPestana + ' veces'">
+                        <Icon name="eye-off" :size="11" /> {{ f.salidasPestana }}
+                      </span>
+                    </div>
+                  </td>
+                  <td class="td-progreso">
+                    <span v-if="f.progreso.terminado" class="tag tag-ok"><Icon name="check" :size="11" /> terminó</span>
+                    <template v-else>{{ f.progreso.actual }} / {{ f.progreso.total }}</template>
+                  </td>
+                  <td v-if="comp.preguntas.length" class="celda">
+                    <div class="celda-puntos">{{ f.preguntas.puntos }}</div>
+                    <div class="celda-sub">✓{{ f.preguntas.correctas }} de {{ f.preguntas.total }}</div>
+                  </td>
+                  <td v-for="p in comp.problemas" :key="p.id" class="celda" :class="claseCelda(f.problemas[p.id])">
+                    <template v-if="f.problemas[p.id] && f.problemas[p.id].envios > 0">
+                      <div class="celda-puntos">
+                        <Icon v-if="f.problemas[p.id].aceptado" name="check" :size="13" />
+                        <Icon v-else-if="f.problemas[p.id].bloqueado" name="lock" :size="12" />
+                        {{ f.problemas[p.id].puntos }}
+                      </div>
+                      <div class="celda-sub">
+                        <template v-if="f.problemas[p.id].puntos > 0">{{ formatoReloj(f.problemas[p.id].tiempoMs) }}</template>
+                        <template v-if="f.problemas[p.id].intentosFallidos"> · ✗{{ f.problemas[p.id].intentosFallidos }}</template>
+                      </div>
+                    </template>
+                    <span v-else class="celda-vacia">—</span>
+                  </td>
+                  <td class="td-puntos">{{ f.puntos }}</td>
+                  <td class="td-tiempo">{{ formatoReloj(f.tiempoTotalMs) }}</td>
+                </tr>
+                <tr v-if="comp.ranking.length === 0">
+                  <td :colspan="comp.problemas.length + 6" class="celda-vacia" style="padding: 24px; text-align: center;">Aún no hay estudiantes</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
+          <p class="leyenda texto-suave">
+            Progreso: ítem en el que va cada estudiante (todos tienen un orden distinto).
+            <template v-if="comp.problemas.length"> Retos: puntos · minutos que tardó en lograr su mejor puntaje · ✗ intentos fallidos. Pasa el mouse sobre R1, R2… para ver el título.</template>
+            <Icon name="eye-off" :size="12" /> = veces que salió de la pestaña. El desempate es por menor tiempo total.
+          </p>
         </div>
-        <div class="sala-acciones">
-          <button class="btn btn-success btn-lg" :disabled="state.participantes.length === 0" @click="iniciarQuiz">
-            <Icon name="play" :size="18" /> Iniciar Quiz ({{ state.participantes.length }} participantes)
-          </button>
-          <button class="btn btn-secondary" @click="nuevaSesion">Cancelar y Nueva sesión</button>
-        </div>        <div v-if="state.participantes.length > 0" class="participantes-espera">
-          <h4>Participantes en sala:</h4>
-          <div class="participantes-chips">
-            <div v-for="p in state.participantes" :key="p.id" class="participante-chip-admin">
-              <strong>{{ p.nombre }}</strong>
-              <span class="Código-est">{{ p.codigoEstudiante }}</span>
+
+        <div v-if="comp.problemas.length" class="card feed-card">
+          <h3 class="tabla-titulo">Últimos envíos</h3>
+          <div v-if="comp.enviosRecientes.length === 0" class="texto-suave" style="padding: 12px 0;">Todavía no hay envíos.</div>
+          <div v-for="e in comp.enviosRecientes" :key="e.id" class="feed-item">
+            <span class="feed-tiempo">{{ formatoReloj(e.tiempoMs) }}</span>
+            <div class="feed-cuerpo">
+              <div><strong>{{ e.nombre }}</strong> · {{ tituloProblema(e.problemaId) }} · {{ lenguajeLabel(e.lenguaje) }}</div>
+              <span class="chip-veredicto" :class="veredictoInfo(e.veredicto).clase">
+                {{ veredictoInfo(e.veredicto).texto }}<template v-if="e.veredicto !== 'COMPILACION'"> {{ e.pasadas }}/{{ e.total }}</template>
+              </span>
+              <span class="feed-puntos">+{{ e.puntos }}</span>
             </div>
           </div>
         </div>
       </div>
-
-      <template v-else>
-        <div class="monitor-control">
-          <div class="control-info">
-            <div class="sala-badge">{{ codigoSalaActiva }}</div>
-            <div class="pregunta-info-control">
-              Pregunta {{ preguntaActualMonitor?.numero || '-' }} / {{ seleccionadas.length }}
-            </div>
-            <div v-if="state.timerActivo || state.tiempoRestante > 0" class="timer-monitor">
-              <div class="timer-bar-mini">
-                <div class="timer-fill-mini" :style="{ width: timerPorcentajeAdmin + '%' }" :class="{ urgente: state.tiempoRestante <= 5 }"></div>
-              </div>
-              <span :class="{ 'urgente-text': state.tiempoRestante <= 5 }">{{ formatoTiempo(state.tiempoRestante) }}</span>
-            </div>
-            <div v-if="preguntaActualMonitor && !quizTerminado" class="respondieron-chip" :class="{ completo: todosRespondieron }">
-              <Icon :name="todosRespondieron ? 'check-circle' : 'users'" :size="16" />
-              Respondieron {{ respondieronActual }} / {{ participantesActivos.length }}
-            </div>
-          </div>
-          <div class="control-botones">
-            <button class="btn btn-primary" :class="{ 'btn-destacado': todosRespondieron && !quizTerminado }" @click="siguientePregunta" :disabled="quizTerminado || avanzando">
-              <template v-if="esUltimaPregunta"><Icon name="square" :size="16" /> Terminar Quiz</template>
-              <template v-else><Icon name="skip-forward" :size="16" /> Siguiente pregunta</template>
-            </button>
-            <button class="btn btn-danger btn-sm" @click="terminarQuizForzado" v-if="!quizTerminado && !esUltimaPregunta">
-              Terminar ahora
-            </button>
-          </div>
-        </div>
-        <div v-if="todosRespondieron && !quizTerminado" class="aviso-todos fade-in">
-          <Icon name="check-circle" :size="22" />
-          <span>
-            <strong>¡Todos respondieron!</strong>
-            <template v-if="state.tiempoRestante > 0"> No hace falta esperar a que se acabe el tiempo:</template>
-            puedes {{ esUltimaPregunta ? 'terminar el quiz y ver los resultados' : 'pasar a la siguiente pregunta' }}.
-          </span>
-          <button class="btn btn-success" @click="siguientePregunta" :disabled="avanzando">
-            <template v-if="esUltimaPregunta"><Icon name="square" :size="16" /> Terminar Quiz</template>
-            <template v-else><Icon name="skip-forward" :size="16" /> Siguiente pregunta</template>
-          </button>
-        </div>
-        <div class="card" style="margin-bottom: 16px; overflow-x: auto;">
-          <table class="monitor-tabla">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Nombre</th>
-                <th>Código</th>
-                <th>Progreso</th>
-                <th>Estado actual</th>
-                <th>Puntaje</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="(p, idx) in participantesOrdenados" :key="p.id" class="participante-row" :class="{ desconectado: p.desconectado }" @click="toggleDetalle(p.id)">
-                <td class="td-pos">{{ idx + 1 }}</td>
-                <td class="td-nombre">
-                  {{ p.nombre }}
-                  <span v-if="p.desconectado" class="desconectado-badge">desconectado</span>
-                </td>
-                <td class="td-Código">{{ p.codigoEstudiante }}</td>
-                <td class="td-progreso">{{ (p.respuestas || []).filter(r => r !== undefined).length }} / {{ seleccionadas.length }}</td>
-                <td class="td-estado">
-                  <span v-if="estadoActual(p) === 'respondio-correcto'" class="estado-chip correcto"><Icon name="check-circle" :size="14" /> Correcto</span>
-                  <span v-else-if="estadoActual(p) === 'respondio-incorrecto'" class="estado-chip incorrecto"><Icon name="x-circle" :size="14" /> Incorrecto</span>
-                  <span v-else class="estado-chip esperando"><Icon name="clock" :size="14" /> Esperando</span>
-                </td>
-                <td class="td-puntaje"><strong>{{ p.puntaje || 0 }}</strong></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div v-if="participanteDetalle" class="card detalle-card fade-in">
-          <div class="detalle-header">
-            <h3>Detalle: {{ participanteDetalle.nombre }} ({{ participanteDetalle.codigoEstudiante }})</h3>
-            <button class="btn btn-sm btn-secondary" @click="participanteDetalleId = null">Cerrar</button>
-          </div>
-          <table class="detalle-tabla">
-            <thead>
-              <tr><th>#</th><th>Pregunta</th><th>Respondio</th><th>Correcta</th><th>Pts</th></tr>
-            </thead>
-            <tbody>
-              <tr v-for="(r, idx) in participanteDetalle.respuestas" :key="idx" :class="r ? (r.esCorrecta ? 'fila-ok' : 'fila-mal') : ''">
-                <td>{{ idx + 1 }}</td>
-                <td class="td-enunciado-corto">{{ seleccionadas[idx]?.enunciado?.substring(0, 50) }}...</td>
-                <td>{{ r ? r.opcionDada : '—' }}</td>
-                <td>{{ seleccionadas[idx]?.opciones[seleccionadas[idx]?.respuesta_correcta] }}</td>
-                <td><strong>{{ r ? r.puntos : 0 }}</strong></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div v-if="quizTerminado && state.resultados" class="card resultados-admin fade-in">
-          <div class="resultados-header">
-            <h3><Icon name="trophy" :size="20" /> Resultados finales</h3>
-            <button class="btn btn-success" @click="exportarExcel"><Icon name="download" :size="16" /> Exportar Excel</button>
-            <button class="btn btn-secondary" @click="nuevaSesion">Nueva sesión</button>
-          </div>
-          <Podio :resultados="state.resultados" style="margin-bottom: 24px;" />
-          <table class="monitor-tabla">
-            <thead>
-              <tr><th>Pos.</th><th>Nombre</th><th>Código</th><th>Correctas</th><th>Puntaje</th></tr>
-            </thead>
-            <tbody>
-              <tr v-for="(r, idx) in state.resultados" :key="r.id" :class="idx === 0 ? 'primer-lugar' : ''">
-                <td><Icon v-if="idx < 3" name="medal" :size="20" :class="'medalla-' + idx" /><template v-else>{{ idx + 1 }}</template></td>
-                <td><strong>{{ r.nombre }}</strong></td>
-                <td>{{ r.codigoEstudiante }}</td>
-                <td>{{ r.totalCorrectas }} / {{ r.totalPreguntas }}</td>
-                <td><strong>{{ r.puntaje }}</strong></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </template>
     </div>
   </div>
 </template>
+
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useQuiz } from '../composables/useQuiz'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { useSocket } from '../composables/useSocket'
 import Icon from '../components/Icon.vue'
 import Podio from '../components/Podio.vue'
+import { formatoReloj, nivelLabel, tipoLabel, lenguajeLabel, veredictoInfo } from '../utils/formato'
 
-const { state, stateRaw, registrarEventosAdmin } = useQuiz()
+const { state } = useSocket()
+const CLAVE_COMPETENCIA = 'competencia-admin-codigo'
 
-const autenticado = ref(false)
+const token = ref(leer(sessionStorage, 'admin-token'))
+const autenticado = computed(() => !!token.value)
 const password = ref('')
 const errorLogin = ref('')
 const cargandoLogin = ref(false)
-const timerActivo = ref(false)
-const segundosPorPregunta = ref(30)
+
+const motor = ref(null)
+const bancoPreguntas = ref([])
+const bancoProblemas = ref([])
+const seleccionPreguntas = ref([])
+const seleccionProblemas = ref([])
 const filtroNivel = ref('todos')
 const filtroTipo = ref('todos')
 const filtroTema = ref('todos')
-const arrastrandoIdx = ref(null) // posición de la pregunta que se está arrastrando
-const avanzando = ref(false) // evita saltar dos preguntas con doble clic
-const seleccionadas = ref([])
-const errorSala = ref('')
-const cargandoSala = ref(false)
-const salaActiva = ref(false)
-const codigoSalaActiva = ref('')
-const quizIniciado = ref(false)
-const quizTerminado = ref(false)
-const preguntaActualMonitor = ref(null)
-const participanteDetalleId = ref(null)
-const totalSegundosAdmin = ref(30)
-const banco = ref([])
+const intentosMax = ref(3)
+const lenguajesSel = ref(['python', 'cpp'])
+const cargandoCrear = ref(false)
+const errorCrear = ref('')
 
-onMounted(async () => {
-  try {
-    const res = await fetch('/api/preguntas')
-    banco.value = await res.json()
-  } catch (e) {
-    console.error('Error cargando banco', e)
-  }
-  const token = sessionStorage.getItem('admin-token')
-  if (token) autenticado.value = true
-  registrarEventosAdmin()
-  state.socket?.on('sala:nueva-pregunta', (p) => {
-    preguntaActualMonitor.value = p
-    totalSegundosAdmin.value = segundosPorPregunta.value
-    avanzando.value = false
-  })
-  state.socket?.on('sala:timer-tick', ({ tiempoRestante }) => {
-    if (totalSegundosAdmin.value < tiempoRestante) totalSegundosAdmin.value = tiempoRestante
-  })
-  state.socket?.on('sala:quiz-terminado', () => {
-    quizTerminado.value = true
-  })
-})
-const preguntasFiltradas = computed(() => {
-  return banco.value.filter(p => {
-    const passNivel = filtroNivel.value === 'todos' || p.nivel === filtroNivel.value
-    const passTipo = filtroTipo.value === 'todos' || p.tipo === filtroTipo.value
-    const passTema = filtroTema.value === 'todos' || p.tema === filtroTema.value
-    return passNivel && passTipo && passTema
-  })
-})
-// Lista de temas del banco (sin repetir), ordenada por número de sección, con su cantidad de preguntas
-const temas = computed(() => {
-  const conteo = {}
-  banco.value.forEach(p => { if (p.tema) conteo[p.tema] = (conteo[p.tema] || 0) + 1 })
-  return Object.keys(conteo)
-    .sort((a, b) => a.localeCompare(b, 'es', { numeric: true }))
-    .map(nombre => ({ nombre, cantidad: conteo[nombre] }))
-})
-const hayFiltros = computed(() => filtroNivel.value !== 'todos' || filtroTipo.value !== 'todos' || filtroTema.value !== 'todos')
-// Monitor: cuántos estudiantes conectados ya respondieron la pregunta actual
-const participantesActivos = computed(() => state.participantes.filter(p => !p.desconectado))
-const respondieronActual = computed(() => {
-  if (!preguntaActualMonitor.value) return 0
-  const idx = preguntaActualMonitor.value.numero - 1
-  return participantesActivos.value.filter(p => (p.respuestas || [])[idx] !== undefined).length
-})
-const todosRespondieron = computed(() =>
-  participantesActivos.value.length > 0 && respondieronActual.value === participantesActivos.value.length
+const comp = ref(null)
+const offsetReloj = ref(0)
+const ahora = ref(Date.now())
+let reloj = null
+
+function leer(storage, clave) {
+  try { return storage.getItem(clave) } catch { return null }
+}
+function escribir(storage, clave, valor) {
+  try { valor === null ? storage.removeItem(clave) : storage.setItem(clave, valor) } catch { /* ignorar */ }
+}
+
+const socket = () => state.socket
+const tituloProblema = (id) => comp.value.problemas.find(p => p.id === id)?.titulo || id
+
+// ---------- Selección ----------
+const temas = computed(() => [...new Set(bancoPreguntas.value.map(q => q.tema).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es', { numeric: true })))
+const preguntasFiltradas = computed(() => bancoPreguntas.value.filter(q =>
+  (filtroNivel.value === 'todos' || q.nivel === filtroNivel.value) &&
+  (filtroTipo.value === 'todos' || q.tipo === filtroTipo.value) &&
+  (filtroTema.value === 'todos' || q.tema === filtroTema.value)
+))
+function seleccionarFiltradas() {
+  seleccionPreguntas.value = [...new Set([...seleccionPreguntas.value, ...preguntasFiltradas.value.map(q => q.id)])]
+}
+const preguntasElegidas = computed(() => bancoPreguntas.value.filter(q => seleccionPreguntas.value.includes(q.id)))
+const problemasElegidos = computed(() => bancoProblemas.value.filter(p => seleccionProblemas.value.includes(p.id)))
+// Una pregunta correcta vale hasta +50 % por rapidez
+const puntosPosibles = computed(() =>
+  preguntasElegidas.value.reduce((a, q) => a + Math.round(q.puntos * 1.5), 0) + problemasElegidos.value.reduce((a, p) => a + p.puntos, 0)
 )
-const totalPuntos = computed(() => seleccionadas.value.reduce((a, p) => a + p.puntos, 0))
-const participantesOrdenados = computed(() => [...state.participantes].sort((a, b) => (b.puntaje || 0) - (a.puntaje || 0)))
-const esUltimaPregunta = computed(() => {
-  if (!preguntaActualMonitor.value) return false
-  return preguntaActualMonitor.value.numero >= seleccionadas.value.length
-})
-const timerPorcentajeAdmin = computed(() => {
-  if (!totalSegundosAdmin.value) return 0
-  return Math.max(0, (state.tiempoRestante / totalSegundosAdmin.value) * 100)
-})
-const participanteDetalle = computed(() => {
-  if (!participanteDetalleId.value) return null
-  return state.participantes.find(p => p.id === participanteDetalleId.value)
-})
+const tiempoMaximoMs = computed(() =>
+  preguntasElegidas.value.reduce((a, q) => a + q.tiempoS * 1000, 0) + problemasElegidos.value.reduce((a, p) => a + p.tiempoMin * 60000, 0)
+)
+const puedeCrear = computed(() =>
+  preguntasElegidas.value.length + problemasElegidos.value.length > 0 && (problemasElegidos.value.length === 0 || lenguajesSel.value.length > 0)
+)
 
+// ---------- Monitor ----------
+const transcurridoMs = computed(() => (comp.value?.inicio ? ahora.value + offsetReloj.value - comp.value.inicio : 0))
+const conectados = computed(() => comp.value.ranking.filter(f => f.conectado).length)
+const terminaron = computed(() => comp.value.ranking.filter(f => f.progreso.terminado).length)
+const resultadosPodio = computed(() =>
+  comp.value.ranking.map(f => ({ id: f.codigoEstudiante, nombre: f.nombre, codigoEstudiante: f.codigoEstudiante, puntaje: f.puntos }))
+)
+
+function claseCelda(e) {
+  if (!e || e.envios === 0) return ''
+  if (e.aceptado) return 'c-ok'
+  if (e.bloqueado) return 'c-bloqueado'
+  if (e.puntos > 0) return 'c-parcial'
+  return 'c-fallo'
+}
+
+// ---------- Sesión ----------
 async function iniciarSesion() {
   errorLogin.value = ''
   cargandoLogin.value = true
@@ -392,316 +382,320 @@ async function iniciarSesion() {
     })
     const data = await res.json()
     if (data.ok) {
-      sessionStorage.setItem('admin-token', data.token)
-      autenticado.value = true
+      escribir(sessionStorage, 'admin-token', data.token)
+      token.value = data.token
+      password.value = ''
+      await cargarDatos()
+      reconectar()
     } else {
-      errorLogin.value = data.mensaje || 'contraseña incorrecta'
+      errorLogin.value = data.mensaje || 'Contraseña incorrecta'
     }
-  } catch (e) {
-    errorLogin.value = 'Error de conexion con el servidor'
+  } catch {
+    errorLogin.value = 'Error de conexión con el servidor'
   } finally {
     cargandoLogin.value = false
   }
 }
-function cerrarSesion() {
-  sessionStorage.removeItem('admin-token')
-  autenticado.value = false
-  nuevaSesion()
-}
-function formatoTiempo(seg) {
-  const s = Math.max(0, parseInt(seg) || 0)
-  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
-}
-function quitarFiltros() {
-  filtroNivel.value = 'todos'; filtroTipo.value = 'todos'; filtroTema.value = 'todos'
-}
-function nivelLabel(n) {
-  return { todos: 'Todos', facil: 'Fácil', medio: 'Medio', dificil: 'Difícil' }[n] || n
-}
-function tipoLabel(t) {
-  return { todos: 'Todos', SM: 'Sel. Múltiple', VF: 'V / F', COMP: 'Completar', IMP: '¿Qué imprime?', ERR: 'Error', DF: 'Diagrama' }[t] || t
-}
-function estaSeleccionada(id) { return seleccionadas.value.some(p => p.id === id) }
-function togglePregunta(p) {
-  const idx = seleccionadas.value.findIndex(x => x.id === p.id)
-  if (idx >= 0) seleccionadas.value.splice(idx, 1)
-  else seleccionadas.value.push({ ...p })
-}
-function seleccionarNivel() {
-  preguntasFiltradas.value.forEach(p => { if (!estaSeleccionada(p.id)) seleccionadas.value.push({ ...p }) })
-}
-function limpiarSeleccion() { seleccionadas.value = [] }
-function moverArriba(idx) {
-  if (idx === 0) return
-  const tmp = seleccionadas.value[idx - 1]
-  seleccionadas.value[idx - 1] = seleccionadas.value[idx]
-  seleccionadas.value[idx] = tmp
-}
-function moverAbajo(idx) {
-  if (idx >= seleccionadas.value.length - 1) return
-  const tmp = seleccionadas.value[idx + 1]
-  seleccionadas.value[idx + 1] = seleccionadas.value[idx]
-  seleccionadas.value[idx] = tmp
-}
-function quitarPregunta(idx) { seleccionadas.value.splice(idx, 1) }
-// --- Arrastrar y soltar para ordenar las seleccionadas ---
-function iniciarArrastre(idx, e) {
-  arrastrandoIdx.value = idx
-  e.dataTransfer.effectAllowed = 'move'
-  e.dataTransfer.setData('text/plain', String(idx)) // Firefox lo necesita para permitir arrastrar
-}
-// Al pasar sobre otra pregunta, la arrastrada se mueve a esa posición (se ve en vivo)
-function arrastrarSobre(idx) {
-  const desde = arrastrandoIdx.value
-  if (desde === null || desde === idx) return
-  const [pregunta] = seleccionadas.value.splice(desde, 1)
-  seleccionadas.value.splice(idx, 0, pregunta)
-  arrastrandoIdx.value = idx
-}
-function terminarArrastre() { arrastrandoIdx.value = null }
 
-async function crearSala() {
-  errorSala.value = ''
-  cargandoSala.value = true
-  stateRaw.participantes = []
-  if (!state.socket?.connected) {
-    cargandoSala.value = false
-    errorSala.value = 'Sin conexión con el servidor. Verifica que esté corriendo y recarga la página.'
-    return
+function cerrarSesion(mensaje = '') {
+  escribir(sessionStorage, 'admin-token', null)
+  token.value = null
+  errorLogin.value = mensaje
+}
+
+async function pedirApi(ruta) {
+  const res = await fetch(ruta, { headers: { 'x-admin-token': token.value } })
+  if (res.status === 401) {
+    cerrarSesion('La sesión expiró (el servidor se reinició). Ingresa la contraseña de nuevo.')
+    throw new Error('No autorizado')
   }
-  state.socket.timeout(8000).emit('admin:crear-sala', {
-    token: sessionStorage.getItem('admin-token'),
-    preguntaIds: seleccionadas.value.map(p => p.id),
-    timerActivo: timerActivo.value,
-    segundosPorPregunta: segundosPorPregunta.value
-  }, (err, res) => {
-    cargandoSala.value = false
-    if (err) {
-      errorSala.value = 'El servidor no respondió. Recarga la página (Ctrl+F5) e intenta de nuevo.'
-      return
-    }
-    if (res.mensaje === 'No autorizado') {
-      cerrarSesion()
-      errorLogin.value = 'La sesión expiró. Ingresa la contraseña de nuevo.'
-      return
-    }
-    if (res.ok) {
-      codigoSalaActiva.value = res.codigo
-      stateRaw.codigoSala = res.codigo
-      stateRaw.rol = 'admin'
-      stateRaw.salaCreada = res.codigo
-      salaActiva.value = true
-    } else {
-      errorSala.value = res.mensaje || 'No se pudo crear la sala. Verifica la conexion.'
-    }
+  return res.json()
+}
+
+async function cargarMotor() {
+  motor.value = null
+  try { motor.value = await pedirApi('/api/admin/motor') } catch (e) { motor.value = { ok: false, mensaje: e.message, lenguajes: {} } }
+}
+
+async function cargarDatos() {
+  try {
+    const banco = await pedirApi('/api/admin/banco')
+    bancoPreguntas.value = banco.preguntas
+    bancoProblemas.value = banco.problemas
+    cargarMotor()
+  } catch { /* cerrarSesion ya mostró el mensaje */ }
+}
+
+// ---------- Socket ----------
+function aplicar(vista) {
+  comp.value = vista
+  offsetReloj.value = vista.ahora - Date.now()
+}
+
+function emitir(evento, datos = {}) {
+  return new Promise((resolve) => {
+    if (!socket()?.connected) return resolve({ ok: false, mensaje: 'Sin conexión con el servidor.' })
+    socket().timeout(10000).emit(evento, datos, (err, res) => resolve(err ? { ok: false, mensaje: 'El servidor no respondió.' } : res))
   })
 }
-function iniciarQuiz() {
-  state.socket.emit('admin:iniciar-quiz', {}, (res) => { if (res.ok) quizIniciado.value = true })
-}
-function siguientePregunta() {
-  if (esUltimaPregunta.value) {
-    state.socket.emit('admin:terminar-quiz', {}, (res) => { if (res.ok) quizTerminado.value = true })
-  } else {
-    if (avanzando.value) return
-    avanzando.value = true
-    state.socket.emit('admin:siguiente-pregunta', {}, () => { avanzando.value = false })
-  }
-}
-function terminarQuizForzado() {
-  if (confirm('Seguro que quieres terminar el quiz ahora?')) {
-    state.socket.emit('admin:terminar-quiz', {}, () => { quizTerminado.value = true })
-  }
-}
-function toggleDetalle(id) { participanteDetalleId.value = participanteDetalleId.value === id ? null : id }
-function estadoActual(p) {
-  if (!preguntaActualMonitor.value) return 'esperando'
-  const idx = (preguntaActualMonitor.value.numero || 1) - 1
-  const r = (p.respuestas || [])[idx]
-  if (!r) return 'esperando'
-  return r.esCorrecta ? 'respondio-correcto' : 'respondio-incorrecto'
-}
-function nuevaSesion() {
-  salaActiva.value = false; quizIniciado.value = false; quizTerminado.value = false
-  codigoSalaActiva.value = ''; preguntaActualMonitor.value = null; participanteDetalleId.value = null
-  seleccionadas.value = []; stateRaw.participantes = []; stateRaw.resultados = null; stateRaw.salaCreada = null
-}
-async function exportarExcel() {
-  if (!state.resultados) return
-  const { default: writeExcelFile } = await import('write-excel-file/browser')
-  const encabezado = (textos) => textos.map(value => ({
-    value, fontWeight: 'bold', textColor: '#FFFFFF', backgroundColor: '#202C45'
-  }))
 
-  const resultados = [
-    encabezado(['Posición', 'Nombre', 'Código estudiante', 'Correctas', 'Total preguntas', 'Bonus rapidez', 'Puntaje']),
-    ...state.resultados.map((r, idx) => [
-      { value: idx + 1 },
-      { value: r.nombre },
-      { value: String(r.codigoEstudiante) },
-      { value: r.totalCorrectas },
-      { value: r.totalPreguntas },
-      { value: r.respuestas.reduce((a, x) => a + (x.bonus || 0), 0) },
-      { value: r.puntaje, fontWeight: 'bold' }
+// Vuelve a tomar el control de la competencia activa (si recargó la página o se cayó la conexión)
+async function reconectar() {
+  const codigo = leer(sessionStorage, CLAVE_COMPETENCIA)
+  if (!codigo || !token.value) return
+  const res = await emitir('admin:competencia:reconectar', { token: token.value, codigo })
+  if (res.ok) aplicar(res.competencia)
+  else if (res.mensaje === 'No autorizado') cerrarSesion('La sesión expiró (el servidor se reinició). Ingresa la contraseña de nuevo.')
+  else if (res.mensaje === 'La competencia ya no existe.') { escribir(sessionStorage, CLAVE_COMPETENCIA, null); comp.value = null }
+}
+
+async function crear() {
+  errorCrear.value = ''
+  cargandoCrear.value = true
+  const res = await emitir('admin:competencia:crear', {
+    token: token.value,
+    preguntaIds: preguntasElegidas.value.map(q => q.id),
+    problemaIds: problemasElegidos.value.map(p => p.id),
+    intentosMax: intentosMax.value,
+    lenguajes: lenguajesSel.value
+  })
+  cargandoCrear.value = false
+  if (res.ok) {
+    escribir(sessionStorage, CLAVE_COMPETENCIA, res.codigo)
+    aplicar(res.competencia)
+  } else if (res.mensaje === 'No autorizado') {
+    cerrarSesion('La sesión expiró. Ingresa la contraseña de nuevo.')
+  } else {
+    errorCrear.value = res.mensaje || 'No se pudo crear la competencia.'
+  }
+}
+
+async function iniciar() {
+  if (comp.value.problemas.length && motor.value && !motor.value.ok &&
+      !confirm('El motor de ejecución no está listo. Los estudiantes no podrán probar ni enviar código en los retos. ¿Iniciar de todas formas?')) return
+  const res = await emitir('admin:competencia:iniciar')
+  if (!res.ok) alert(res.mensaje || 'No se pudo iniciar la competencia.')
+}
+
+async function terminar() {
+  if (!confirm('¿Terminar la competencia ahora para todos? Los estudiantes ya no podrán responder ni enviar.')) return
+  await emitir('admin:competencia:terminar')
+}
+
+function nueva() {
+  escribir(sessionStorage, CLAVE_COMPETENCIA, null)
+  comp.value = null
+  cargarMotor()
+}
+
+// ---------- Exportar a Excel ----------
+async function exportarExcel() {
+  const res = await emitir('admin:competencia:exportar')
+  if (!res.ok) return alert('No se pudo obtener la información de la competencia.')
+  const { default: writeExcelFile } = await import('write-excel-file/browser')
+  const encabezado = (textos) => textos.map(value => ({ value, fontWeight: 'bold', textColor: '#FFFFFF', backgroundColor: '#202C45' }))
+  const retos = res.problemas.map((p, i) => `R${i + 1}. ${p.titulo}`)
+
+  const ranking = [
+    encabezado(['Posición', 'Nombre', 'Código estudiante', 'Puntos', 'Preguntas correctas', 'Puntos preguntas', 'Retos resueltos', 'Tiempo total (min:seg)', 'Intentos fallidos', 'Salidas de pestaña', ...retos]),
+    ...res.ranking.map(f => [
+      { value: f.posicion },
+      { value: f.nombre },
+      { value: String(f.codigoEstudiante) },
+      { value: f.puntos, fontWeight: 'bold' },
+      { value: `${f.preguntas.correctas}/${f.preguntas.total}` },
+      { value: f.preguntas.puntos },
+      { value: f.resueltos },
+      { value: formatoReloj(f.tiempoTotalMs) },
+      { value: f.intentosFallidos },
+      { value: f.salidasPestana },
+      ...res.problemas.map(p => ({ value: f.problemas[p.id]?.puntos || 0 }))
     ])
   ]
 
-  const detalle = [
-    encabezado(['Nombre', 'Código estudiante', 'Pregunta', 'Enunciado', 'Respondió', 'Respuesta correcta', 'Resultado', 'Puntos base', 'Bonus rapidez', 'Puntos']),
-    ...state.resultados.flatMap(r => r.respuestas.map((x, idx) => [
-      { value: r.nombre },
-      { value: String(r.codigoEstudiante) },
-      { value: idx + 1 },
-      { value: x.enunciado },
-      { value: x.opcionDada || 'Sin respuesta' },
-      { value: x.opcionCorrecta },
-      { value: x.respuesta === null ? 'Sin respuesta' : x.esCorrecta ? 'Correcta' : 'Incorrecta' },
-      { value: x.puntosBase || 0 },
-      { value: x.bonus || 0 },
-      { value: x.puntos || 0 }
-    ]))
+  const preguntas = [
+    encabezado(['Nombre', 'Código estudiante', 'Pregunta', 'Nivel', 'Respondió', 'Respuesta correcta', 'Resultado', 'Segundos', 'Puntos base', 'Bonus rapidez', 'Puntos']),
+    ...res.respuestas.flatMap(est => res.preguntas.map(q => {
+      const r = est.respuestas[q.id]
+      return [
+        { value: est.nombre },
+        { value: String(est.codigoEstudiante) },
+        { value: q.enunciado.slice(0, 200) },
+        { value: nivelLabel(q.nivel) },
+        { value: r && r.respuesta !== null ? q.opciones[r.respuesta] : 'Sin respuesta' },
+        { value: q.opciones[q.respuesta_correcta] },
+        { value: !r || r.respuesta === null ? 'Sin respuesta' : r.esCorrecta ? 'Correcta' : 'Incorrecta' },
+        { value: r && r.respuesta !== null ? Math.round(r.ms / 1000) : '' },
+        { value: r?.puntosBase || 0 },
+        { value: r?.bonus || 0 },
+        { value: r?.puntos || 0 }
+      ]
+    }))
   ]
 
-  await writeExcelFile([
-    { data: resultados, sheet: 'Resultados', columns: [{ width: 10 }, { width: 28 }, { width: 18 }, { width: 11 }, { width: 15 }, { width: 14 }, { width: 10 }] },
-    { data: detalle, sheet: 'Detalle', columns: [{ width: 28 }, { width: 18 }, { width: 10 }, { width: 50 }, { width: 28 }, { width: 28 }, { width: 14 }, { width: 12 }, { width: 14 }, { width: 8 }] }
-  ]).toFile(`quiz-resultados-${codigoSalaActiva.value}-${new Date().toISOString().slice(0, 10)}.xlsx`)
+  const envios = [
+    encabezado(['Minuto en el reto', 'Nombre', 'Código estudiante', 'Reto', 'Lenguaje', 'Veredicto', 'Pruebas ocultas', 'Puntos', 'Mensaje', 'Código enviado']),
+    ...res.envios.map(e => [
+      { value: formatoReloj(e.tiempoMs) },
+      { value: e.nombre },
+      { value: String(e.codigoEstudiante) },
+      { value: res.problemas.find(p => p.id === e.problemaId)?.titulo || e.problemaId },
+      { value: lenguajeLabel(e.lenguaje) },
+      { value: veredictoInfo(e.veredicto).texto },
+      { value: `${e.pasadas}/${e.total}` },
+      { value: e.puntos },
+      { value: (e.mensaje || '').slice(0, 1000) },
+      { value: (e.codigo || '').slice(0, 30000), wrap: true }
+    ])
+  ]
+
+  const hojas = [
+    { data: ranking, sheet: 'Ranking', columns: [{ width: 10 }, { width: 28 }, { width: 18 }, { width: 10 }, { width: 18 }, { width: 15 }, { width: 14 }, { width: 20 }, { width: 16 }, { width: 18 }, ...retos.map(() => ({ width: 22 }))] }
+  ]
+  if (res.preguntas.length) hojas.push({ data: preguntas, sheet: 'Preguntas', columns: [{ width: 26 }, { width: 18 }, { width: 50 }, { width: 10 }, { width: 28 }, { width: 28 }, { width: 14 }, { width: 10 }, { width: 12 }, { width: 14 }, { width: 8 }] })
+  if (res.problemas.length) hojas.push({ data: envios, sheet: 'Envíos', columns: [{ width: 16 }, { width: 26 }, { width: 18 }, { width: 28 }, { width: 10 }, { width: 22 }, { width: 14 }, { width: 8 }, { width: 40 }, { width: 70 }] })
+
+  await writeExcelFile(hojas).toFile(`competencia-${comp.value.codigo}-${new Date().toISOString().slice(0, 10)}.xlsx`)
 }
+
+// ---------- Ciclo de vida ----------
+function alEstado(vista) {
+  if (comp.value && vista.codigo === comp.value.codigo) aplicar(vista)
+}
+function alReconectar() {
+  if (comp.value) reconectar()
+}
+
+onMounted(() => {
+  reloj = setInterval(() => { ahora.value = Date.now() }, 1000)
+  socket()?.on('competencia:admin-estado', alEstado)
+  socket()?.on('connect', alReconectar)
+  if (token.value) {
+    cargarDatos()
+    reconectar()
+  }
+})
+
+onBeforeUnmount(() => {
+  clearInterval(reloj)
+  socket()?.off('competencia:admin-estado', alEstado)
+  socket()?.off('connect', alReconectar)
+})
 </script>
+
 <style scoped>
 .admin-page { min-height: 100vh; background: var(--color-bg); }
+.ancho { max-width: 1280px; }
 .header-info { margin-left: auto; display: flex; gap: 8px; align-items: center; }
-.nombre-chip { background: rgba(255,255,255,0.2); color: white; padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: 600; }
 .card-header-aceis { text-align: center; padding-bottom: 8px; }
 .card-header-aceis h2 { color: var(--color-primary); font-size: 22px; }
 .card-header-aceis p { color: var(--color-text-light); font-size: 14px; }
-.seccion-titulo { margin-bottom: 20px; }
+.texto-suave { color: var(--color-text-light); }
+.texto-centro { text-align: center; }
+
+.seccion-titulo { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
 .seccion-titulo h2 { color: var(--color-primary); font-size: 22px; }
-.seccion-titulo p { color: var(--color-text-light); }
-.config-timer { margin-bottom: 16px; }
-.timer-toggle { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
-.switch-label { display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 600; }
-.switch-input { display: none; }
-.switch-track { width: 44px; height: 24px; background: var(--color-border); border-radius: 12px; position: relative; transition: background 0.2s; flex-shrink: 0; }
-.switch-track::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; background: white; border-radius: 50%; transition: transform 0.2s; }
-.switch-input:checked + .switch-track { background: var(--color-primary); }
-.switch-input:checked + .switch-track::after { transform: translateX(20px); }
-.timer-segundos { display: flex; align-items: center; gap: 8px; }
-.filtros-card { margin-bottom: 16px; }
-.filtros-row { display: flex; flex-direction: column; gap: 12px; }
-.filtro-grupo { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.filtro-label { font-size: 13px; font-weight: 600; color: var(--color-text-light); min-width: 48px; }
+.seccion-titulo p { color: var(--color-text-light); max-width: 680px; }
+.motor-chip { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 600; background: #E9EDF5; color: var(--color-primary); }
+.motor-chip.ok { background: var(--color-success-light); color: var(--color-success); }
+.motor-chip.mal { background: var(--color-error-light); color: var(--color-error); }
+.btn-link { background: none; border: none; color: inherit; text-decoration: underline; cursor: pointer; font-family: inherit; font-size: 12px; }
+code { background: rgba(0,0,0,0.06); padding: 1px 6px; border-radius: 4px; font-size: 13px; }
+
+.lista-cabecera { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.lista-cabecera h3 { color: var(--color-primary); }
+.lista-acciones { display: flex; gap: 8px; flex-wrap: wrap; }
 .count-badge { background: var(--color-primary); color: white; border-radius: 12px; padding: 2px 8px; font-size: 12px; margin-left: 4px; }
-.config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-@media (max-width: 768px) { .config-grid { grid-template-columns: 1fr; } }
-.admin-page { min-height: 100vh; background: var(--color-bg); }
-.header-info { margin-left: auto; display: flex; gap: 8px; align-items: center; }
-.nombre-chip { background: rgba(255,255,255,0.2); color: white; padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: 600; }
-.card-header-aceis { text-align: center; padding-bottom: 8px; }
-.card-header-aceis h2 { color: var(--color-primary); font-size: 22px; }
-.card-header-aceis p { color: var(--color-text-light); font-size: 14px; }
-.seccion-titulo { margin-bottom: 20px; }
-.seccion-titulo h2 { color: var(--color-primary); font-size: 22px; }
-.seccion-titulo p { color: var(--color-text-light); }
-.config-timer { margin-bottom: 16px; }
-.timer-toggle { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
-.switch-label { display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 600; }
-.switch-input { display: none; }
-.switch-track { width: 44px; height: 24px; background: var(--color-border); border-radius: 12px; position: relative; transition: background 0.2s; flex-shrink: 0; }
-.switch-track::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; background: white; border-radius: 50%; transition: transform 0.2s; }
-.switch-input:checked + .switch-track { background: var(--color-primary); }
-.switch-input:checked + .switch-track::after { transform: translateX(20px); }
-.timer-segundos { display: flex; align-items: center; gap: 8px; }.filtros-card { margin-bottom: 16px; }
-.filtros-row { display: flex; flex-direction: column; gap: 12px; }
-.filtro-grupo { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.filtro-label { font-size: 13px; font-weight: 600; color: var(--color-text-light); min-width: 48px; }
-.count-badge { background: var(--color-primary); color: white; border-radius: 12px; padding: 2px 8px; font-size: 12px; margin-left: 4px; }
-.config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-@media (max-width: 768px) { .config-grid { grid-template-columns: 1fr; } }
-.preguntas-lista { max-height: 420px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
-.pregunta-item { display: flex; align-items: flex-start; gap: 10px; padding: 12px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); cursor: pointer; transition: all 0.15s; }
-.pregunta-item:hover { border-color: var(--color-primary); background: rgba(32,44,69,0.03); }
-.pregunta-item.seleccionada { border-color: var(--color-primary); background: rgba(32,44,69,0.06); }
-.pregunta-check { flex-shrink: 0; accent-color: var(--color-primary); width: 16px; height: 16px; cursor: pointer; }
-.pregunta-info { flex: 1; min-width: 0; }
-/* Vista previa en 2 líneas; al pasar el mouse se muestra la pregunta completa */
-.pregunta-preview { font-size: 13px; margin-bottom: 6px; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; word-break: break-word; }
-.pregunta-item:hover .pregunta-preview { display: block; -webkit-line-clamp: unset; line-clamp: unset; overflow: visible; white-space: pre-wrap; }
-.arrastrando-activo .pregunta-item:hover .pregunta-preview { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; white-space: normal; }
-.pregunta-meta { display: flex; gap: 4px; flex-wrap: wrap; }
-.orden-num { width: 24px; height: 24px; border-radius: 50%; background: var(--color-primary); color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; }
-.orden-controls { display: flex; gap: 4px; flex-shrink: 0; }
-.btn-orden { width: 28px; height: 28px; border: 1px solid var(--color-border); background: white; border-radius: 4px; cursor: pointer; font-size: 11px; display: flex; align-items: center; justify-content: center; }
-.btn-orden:hover:not(:disabled) { border-color: var(--color-primary); color: var(--color-primary); }
-.btn-orden:disabled { opacity: 0.3; cursor: not-allowed; }
-.btn-quitar:hover:not(:disabled) { border-color: var(--color-error); color: var(--color-error); }
-.seleccionadas-footer { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--color-border); }
-.total-puntos { font-size: 14px; color: var(--color-text-light); margin-bottom: 12px; }
-.empty-state { text-align: center; padding: 40px; color: var(--color-text-light); }.sala-Código-card { text-align: center; }
-.sala-Código-display { margin-bottom: 24px; }
-.sala-Código-label { font-size: 13px; color: var(--color-text-light); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
-.sala-Código-valor { font-size: 56px; font-weight: 800; color: var(--color-primary); letter-spacing: 4px; }
-.sala-Código-hint { font-size: 14px; color: var(--color-text-light); }
-.sala-info { margin-bottom: 24px; }
-.participantes-count { font-size: 16px; color: var(--color-text-light); }
-.count-grande { font-size: 48px; font-weight: 800; color: var(--color-primary); display: block; }
-.sala-acciones { display: flex; gap: 12px; justify-content: center; margin-bottom: 24px; flex-wrap: wrap; }
-.participantes-espera { text-align: left; padding-top: 16px; border-top: 1px solid var(--color-border); }
-.participantes-espera h4 { color: var(--color-text-light); font-size: 13px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
-.participantes-chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.participante-chip-admin { background: rgba(32,44,69,0.06); border: 1px solid rgba(32,44,69,0.2); padding: 6px 14px; border-radius: 20px; font-size: 14px; }
-.participante-chip-admin .Código-est { font-size: 12px; color: var(--color-text-light); margin-left: 4px; }.monitor-control { display: flex; align-items: center; justify-content: space-between; background: var(--color-primary); color: white; padding: 16px 24px; border-radius: var(--radius-md); margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
-.control-info { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.filtros { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.filtro { width: auto; padding: 6px 10px; font-size: 13px; }
+.filtro-tema { min-width: 240px; max-width: 100%; }
+.items-lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 10px; max-height: 460px; overflow-y: auto; padding: 2px; }
+@media (max-width: 480px) { .items-lista { grid-template-columns: 1fr; } }
+.item { display: flex; gap: 12px; align-items: flex-start; padding: 12px; border: 2px solid var(--color-border); border-radius: var(--radius-sm); cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+.item:hover { border-color: var(--color-primary-light); }
+.item.seleccionado { border-color: var(--color-primary); background: rgba(32,44,69,0.04); }
+.item input { margin-top: 4px; accent-color: var(--color-primary); width: 16px; height: 16px; flex-shrink: 0; }
+.item-info { flex: 1; min-width: 0; }
+.item-titulo { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 4px; }
+/* Vista previa en 2 líneas; al pasar el mouse se ve completa */
+.item-enunciado { font-size: 13px; color: var(--color-text-light); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; white-space: pre-wrap; word-break: break-word; }
+.item:hover .item-enunciado { display: block; overflow: visible; }
+.item-tema { font-size: 12px; color: var(--color-text-light); margin-top: 4px; font-style: italic; }
+.badge-tema { background: #F1F3F8; color: var(--color-text-light); font-weight: 500; text-transform: none; letter-spacing: 0; }
+.badge-tiempo { background: #E9EDF5; color: var(--color-primary); display: inline-flex; align-items: center; gap: 3px; }
+
+.config-retos { display: flex; gap: 24px; flex-wrap: wrap; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--color-border); }
+.config-campo { display: flex; flex-direction: column; gap: 6px; }
+.config-campo label { font-weight: 600; font-size: 14px; }
+.config-campo .form-control { width: 140px; }
+.config-campo small { color: var(--color-text-light); font-size: 12px; }
+.checks { display: flex; gap: 16px; padding-top: 10px; }
+.checks label { display: inline-flex; gap: 6px; align-items: center; font-weight: 500; cursor: pointer; }
+.checks input { accent-color: var(--color-primary); width: 16px; height: 16px; }
+.crear-footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; position: sticky; bottom: 12px; box-shadow: var(--shadow-md); }
+
+.codigo-label { font-size: 13px; color: var(--color-text-light); text-transform: uppercase; letter-spacing: 1px; }
+.codigo-valor { font-size: 56px; font-weight: 800; color: var(--color-primary); letter-spacing: 4px; }
+.resumen-config { display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; margin: 12px 0 20px; font-size: 14px; color: var(--color-text-light); }
+.resumen-config span { display: inline-flex; align-items: center; gap: 4px; }
+.count-grande { font-size: 48px; font-weight: 800; color: var(--color-primary); line-height: 1.1; }
+.sala-acciones { display: flex; gap: 12px; justify-content: center; margin: 20px 0; flex-wrap: wrap; }
+.participantes-chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; padding-top: 16px; border-top: 1px solid var(--color-border); }
+.chip-participante { background: rgba(32,44,69,0.06); border: 1px solid rgba(32,44,69,0.2); padding: 5px 12px; border-radius: 20px; font-size: 13px; color: var(--color-text-light); }
+.chip-participante strong { color: var(--color-text); }
+.chip-participante.off { opacity: 0.5; }
+
+.monitor-barra { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; background: var(--color-primary); color: white; padding: 14px 20px; border-radius: var(--radius-md); margin-bottom: 16px; }
+.monitor-info { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
 .sala-badge { background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: 700; letter-spacing: 1px; }
-.pregunta-info-control { font-weight: 600; }
-.timer-monitor { display: flex; align-items: center; gap: 8px; min-width: 120px; }
-.timer-bar-mini { flex: 1; height: 6px; background: rgba(255,255,255,0.3); border-radius: 3px; overflow: hidden; }
-.timer-fill-mini { height: 100%; background: white; border-radius: 3px; transition: width 1s linear; }
-.timer-fill-mini.urgente { background: #ff6b6b; }
-.urgente-text { color: #ff6b6b; font-weight: 700; }
-.control-botones { display: flex; gap: 8px; }
-.monitor-tabla { width: 100%; border-collapse: collapse; font-size: 14px; }
-.monitor-tabla th { background: var(--color-bg); padding: 10px 12px; text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--color-text-light); border-bottom: 2px solid var(--color-border); }
-.monitor-tabla td { padding: 12px; border-bottom: 1px solid var(--color-border); }
-.participante-row { cursor: pointer; transition: background 0.15s; }
-.participante-row:hover { background: rgba(32,44,69,0.04); }
-.participante-row.desconectado { opacity: 0.5; }
-.desconectado-badge { background: var(--color-error-light); color: var(--color-error); font-size: 11px; padding: 2px 6px; border-radius: 4px; margin-left: 6px; }
-.estado-chip { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
-.estado-chip.correcto { background: var(--color-success-light); color: #155724; }
-.estado-chip.incorrecto { background: var(--color-error-light); color: #721c24; }
-.estado-chip.esperando { background: #FFF3CD; color: #856404; }
-.td-Código { color: var(--color-text-light); font-size: 13px; }
-.detalle-card { margin-bottom: 16px; }
-.detalle-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-.detalle-tabla { width: 100%; border-collapse: collapse; font-size: 13px; }
-.detalle-tabla th { padding: 8px; border-bottom: 2px solid var(--color-border); text-align: left; font-size: 11px; text-transform: uppercase; color: var(--color-text-light); }
-.detalle-tabla td { padding: 8px; border-bottom: 1px solid var(--color-border); }
-.fila-ok { background: rgba(39,174,96,0.05); }
-.fila-mal { background: rgba(231,76,60,0.05); }
-.td-enunciado-corto { max-width: 200px; font-size: 12px; color: var(--color-text-light); }
-.resultados-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
-.resultados-header h3 { font-size: 18px; color: var(--color-primary); }
-.medalla-0 { color: #C99500; }
-.medalla-1 { color: #8A94A6; }
-.medalla-2 { color: #B8651B; }
-.primer-lugar { background: rgba(255,215,0,0.1); font-weight: 700; }
-.nav-modos { display: flex; gap: 4px; margin-left: 16px; background: rgba(255,255,255,0.1); padding: 4px; border-radius: var(--radius-sm); }
-.nav-modo { color: rgba(255,255,255,0.8); text-decoration: none; padding: 6px 14px; border-radius: 6px; font-size: 14px; font-weight: 600; }
-.nav-modo:hover { color: white; }
-.nav-modo.activo { background: white; color: var(--color-primary); }
-.timer-equivalente { font-size: 13px; color: var(--color-text-light); }
-.filtro-select { width: auto; min-width: 260px; max-width: 100%; padding: 6px 10px; font-size: 13px; }
-.badge-tema { background: #F1F3F8; color: var(--color-text-light); font-weight: 500; }
-.ayuda-arrastre { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--color-text-light); margin: -4px 0 8px; }
-.arrastrable { cursor: grab; }
-.arrastrable:active { cursor: grabbing; }
-.agarre { display: flex; align-items: center; align-self: center; color: var(--color-text-light); flex-shrink: 0; }
-.pregunta-item.arrastrando { opacity: 0.45; border-style: dashed; }
-.respondieron-chip { display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.15); padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: 600; }
-.respondieron-chip.completo { background: var(--color-success); }
-.aviso-todos { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; background: var(--color-success-light); color: var(--color-success); border: 1px solid var(--color-success); padding: 12px 16px; border-radius: var(--radius-md); margin-bottom: 16px; }
-.aviso-todos span { flex: 1; min-width: 200px; color: var(--color-text); }
-.btn-destacado { animation: pulso 1.4s ease-in-out infinite; }
-@keyframes pulso { 0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.7); } 50% { box-shadow: 0 0 0 6px rgba(255,255,255,0); } }
+.reloj-grande { display: inline-flex; align-items: center; gap: 8px; font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.dato { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; opacity: 0.9; }
+.monitor-botones { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.monitor-grid { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; align-items: start; }
+.monitor-grid.sin-feed { grid-template-columns: 1fr; }
+@media (max-width: 1000px) { .monitor-grid { grid-template-columns: 1fr; } }
+.tabla-titulo { font-size: 16px; color: var(--color-primary); margin-bottom: 12px; }
+.tabla-scroll { overflow-x: auto; }
+.tabla-ranking { width: 100%; border-collapse: collapse; font-size: 14px; }
+.tabla-ranking th { background: var(--color-bg); padding: 8px 10px; text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--color-text-light); border-bottom: 2px solid var(--color-border); white-space: nowrap; }
+.th-centro { text-align: center !important; }
+.th-centro small { display: block; font-size: 10px; font-weight: 400; }
+.tabla-ranking td { padding: 8px 10px; border-bottom: 1px solid var(--color-border); vertical-align: middle; }
+.tabla-ranking tr.off { opacity: 0.55; }
+.td-pos { font-weight: 700; width: 36px; }
+.td-nombre { min-width: 160px; }
+.td-nombre .sub { font-size: 12px; color: var(--color-text-light); display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.td-progreso { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.tag { font-size: 11px; padding: 1px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 3px; }
+.tag-off { background: var(--color-error-light); color: var(--color-error); }
+.tag-aviso { background: #FFF3CD; color: #856404; }
+.tag-ok { background: var(--color-success-light); color: var(--color-success); font-weight: 700; }
+.celda { text-align: center; min-width: 72px; border-left: 1px solid var(--color-border); }
+.celda-puntos { font-weight: 800; display: inline-flex; align-items: center; gap: 3px; }
+.celda-sub { font-size: 11px; opacity: 0.85; white-space: nowrap; }
+.celda-vacia { color: #B8C0CE; }
+.c-ok { background: var(--color-success-light); color: var(--color-success); }
+.c-parcial { background: #FFF8E1; color: #856404; }
+.c-fallo { background: #FDF1F0; color: var(--color-error); }
+.c-bloqueado { background: var(--color-error-light); color: var(--color-error); }
+.td-puntos { font-weight: 800; font-size: 16px; color: var(--color-primary); }
+.td-tiempo { font-variant-numeric: tabular-nums; color: var(--color-text-light); }
+.medalla-1 { color: #C99500; }
+.medalla-2 { color: #8A94A6; }
+.medalla-3 { color: #B8651B; }
+.leyenda { font-size: 12px; margin-top: 10px; }
+
+.feed-card { max-height: 640px; overflow-y: auto; }
+.feed-item { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--color-border); font-size: 13px; }
+.feed-item:last-child { border-bottom: none; }
+.feed-tiempo { font-variant-numeric: tabular-nums; color: var(--color-text-light); min-width: 40px; }
+.feed-cuerpo { flex: 1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.feed-cuerpo > div { width: 100%; }
+.feed-puntos { margin-left: auto; font-weight: 800; color: var(--color-primary); }
+.chip-veredicto { padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 700; }
+.v-aceptado { background: var(--color-success-light); color: var(--color-success); }
+.v-parcial { background: #FFF3CD; color: #856404; }
+.v-error { background: var(--color-error-light); color: var(--color-error); }
+.v-compilacion { background: #E9EDF5; color: var(--color-primary); }
 </style>

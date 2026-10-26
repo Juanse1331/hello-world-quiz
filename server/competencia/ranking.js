@@ -1,7 +1,7 @@
-// Ranking del reto.
-//  1. Más puntos.
-//  2. Desempate: menor tiempo total. El tiempo de cada problema es el momento (desde que inició el reto)
-//     en que el estudiante logró su mejor puntaje en ese problema.
+// Ranking de la competencia.
+//  1. Más puntos (preguntas + problemas).
+//  2. Desempate: menor tiempo total. Para una pregunta acertada, lo que tardó en responderla;
+//     para un problema, lo que tardó (desde que se le abrió) en lograr su mejor puntaje.
 //  3. Si siguen empatados: quien tenga menos intentos fallidos.
 
 function filaRanking(reto, p) {
@@ -9,7 +9,22 @@ function filaRanking(reto, p) {
   let tiempoTotalMs = 0
   let resueltos = 0
   let intentosFallidos = 0
+  let correctas = 0
+  let respondidas = 0
+  let puntosPreguntas = 0
   const problemas = {}
+
+  for (const id of reto.preguntaIds) {
+    const r = p.respuestas[id]
+    if (!r) continue
+    if (r.respuesta !== null) respondidas++
+    if (r.esCorrecta) {
+      correctas++
+      puntosPreguntas += r.puntos
+      tiempoTotalMs += r.ms
+    }
+  }
+  puntos += puntosPreguntas
 
   for (const id of reto.problemaIds) {
     const e = p.problemas[id] || null
@@ -33,10 +48,13 @@ function filaRanking(reto, p) {
     codigoEstudiante: p.codigoEstudiante,
     conectado: p.conectado,
     salidasPestana: p.salidasPestana || 0,
+    // Progreso por su recorrido: ítem en el que va (1..total) o terminado
+    progreso: { actual: Math.min(p.actual + 1, p.orden.length), total: p.orden.length, terminado: !!p.terminado },
     puntos,
     tiempoTotalMs,
     resueltos,
     intentosFallidos,
+    preguntas: { correctas, respondidas, total: reto.preguntaIds.length, puntos: puntosPreguntas },
     problemas
   }
 }

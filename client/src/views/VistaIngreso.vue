@@ -2,19 +2,19 @@
   <div class="ingreso-page">
     <header class="app-header">
       <img src="../assets/logo-aceis.png" alt="ACEIS" class="logo" />
-      <h1>Hello World Quiz</h1>
+      <h1>Hello World · ACEIS</h1>
     </header>
 
     <main class="container-sm" style="padding-top: 48px;">
       <div class="card fade-in">
         <div class="card-header-aceis">
-          <h2>Unirte a una sala</h2>
-          <p>Ingresa tus datos y el código que te dio el profesor (quiz o reto de programación)</p>
+          <h2>Unirte a la competencia</h2>
+          <p>Ingresa tus datos y el código que te dio el profesor</p>
         </div>
 
-        <div v-if="sesionReto" class="alert alert-info reto-pendiente">
-          <span>Tienes un reto de programación en curso (<strong>{{ sesionReto.codigoSala }}</strong>).</span>
-          <button type="button" class="btn btn-sm btn-primary" @click="router.push('/reto')">Continuar <Icon name="arrow-right" :size="14" /></button>
+        <div v-if="sesionPendiente" class="alert alert-info reto-pendiente">
+          <span>Tienes una competencia en curso (<strong>{{ sesionPendiente.codigoSala }}</strong>).</span>
+          <button type="button" class="btn btn-sm btn-primary" @click="router.push('/competencia')">Continuar <Icon name="arrow-right" :size="14" /></button>
         </div>
 
         <form @submit.prevent="unirse" style="margin-top: 24px;">
@@ -82,14 +82,14 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { useQuiz } from '../composables/useQuiz'
-import { useReto } from '../composables/useReto'
+import { useSocket } from '../composables/useSocket'
+import { useCompetencia } from '../composables/useCompetencia'
 import Icon from '../components/Icon.vue'
 
 const router = useRouter()
-const { state, stateRaw, registrarEventosEstudiante } = useQuiz()
-const { aplicarIngreso, leerSesion } = useReto()
-const sesionReto = leerSesion()
+const { state } = useSocket()
+const { aplicarIngreso, leerSesion } = useCompetencia()
+const sesionPendiente = leerSesion()
 
 const form = reactive({
   nombre: '',
@@ -98,8 +98,6 @@ const form = reactive({
 })
 const error = ref('')
 const cargando = ref(false)
-
-registrarEventosEstudiante(router)
 
 function unirse() {
   error.value = ''
@@ -116,16 +114,10 @@ function unirse() {
     codigoSala: form.codigoSala.trim().toUpperCase()
   }, (respuesta) => {
     cargando.value = false
-    if (respuesta.ok && respuesta.modo === 'reto') {
-      // La sala es un reto de programación
+    if (respuesta.ok) {
+      // Entrada nueva o reingreso (mismo nombre y código): conserva su progreso
       aplicarIngreso(respuesta, { nombre: form.nombre.trim(), codigoEstudiante: form.codigoEstudiante.trim() })
-      router.push('/reto')
-    } else if (respuesta.ok) {
-      stateRaw.nombre = form.nombre.trim()
-      stateRaw.codigoEstudiante = form.codigoEstudiante.trim()
-      stateRaw.codigoSala = form.codigoSala.trim().toUpperCase()
-      stateRaw.rol = 'estudiante'
-      router.push('/sala')
+      router.push('/competencia')
     } else {
       error.value = respuesta.mensaje || 'Error al unirse a la sala'
     }

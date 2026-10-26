@@ -3,7 +3,8 @@ import vue from '@vitejs/plugin-vue'
 import path from 'path'
 
 export default defineConfig({
-  plugins: [vue()],
+  // <sammy-mascota> es un Web Component (components/sammy.js), no un componente de Vue
+  plugins: [vue({ template: { compilerOptions: { isCustomElement: (tag) => tag === 'sammy-mascota' } } })],
   server: {
     proxy: {
       '/api': 'http://localhost:3000',

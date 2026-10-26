@@ -1,22 +1,21 @@
-// Estado del modo reto para el estudiante.
-// Usa el mismo socket del quiz (lo abre useQuiz al arrancar la app).
+// Estado de la competencia para el estudiante.
 import { reactive } from 'vue'
-import { useQuiz } from './useQuiz'
+import { useSocket } from './useSocket'
 
-const CLAVE_SESION = 'reto-sesion'
+const CLAVE_SESION = 'competencia-sesion'
 
 const estado = reactive({
-  reto: null,          // vista que envía el servidor (problemas, mi estado, mis envíos, ranking al final)
+  comp: null,          // vista que envía el servidor (ítem actual, puntos, ranking y resumen al final)
   offsetReloj: 0,      // diferencia entre el reloj del servidor y el del navegador
   cola: null,          // { tipo: 'envio' | 'prueba', posicion }
-  reemplazada: false,  // el estudiante abrió el reto en otra pestaña
+  reemplazada: false,  // el estudiante abrió la competencia en otra pestaña
   reconectando: false
 })
 
 let eventosRegistrados = false
 
 function socket() {
-  return useQuiz().state.socket
+  return useSocket().state.socket
 }
 
 function leerSesion() {
@@ -27,7 +26,7 @@ function guardarSesion(datos) {
 }
 
 function aplicarVista(vista) {
-  estado.reto = vista
+  estado.comp = vista
   estado.offsetReloj = vista.ahora - Date.now()
 }
 
@@ -40,31 +39,24 @@ function registrarEventos() {
   if (!s || eventosRegistrados) return
   eventosRegistrados = true
 
-  s.on('reto:mi-estado', (vista) => {
-    if (estado.reto && vista.codigo !== estado.reto.codigo) return
+  s.on('competencia:mi-estado', (vista) => {
+    if (estado.comp && vista.codigo !== estado.comp.codigo) return
     aplicarVista(vista)
   })
-  s.on('reto:estado', ({ estado: est, inicio, fin, ahora }) => {
-    if (!estado.reto) return
-    estado.reto.estado = est
-    estado.reto.inicio = inicio
-    estado.reto.fin = fin
-    estado.offsetReloj = ahora - Date.now()
-  })
-  s.on('reto:cola', (info) => { estado.cola = info })
-  s.on('reto:sesion-reemplazada', () => { estado.reemplazada = true })
-  // Si se cae el WiFi y el socket se reconecta, volver a entrar automáticamente al reto
+  s.on('competencia:cola', (info) => { estado.cola = info })
+  s.on('competencia:sesion-reemplazada', () => { estado.reemplazada = true })
+  // Si se cae el WiFi y el socket se reconecta, volver a entrar automáticamente
   s.on('connect', () => {
-    if (estado.reto && !estado.reemplazada) reingresar()
+    if (estado.comp && !estado.reemplazada) reingresar()
   })
 }
 
-// Se llama desde la pantalla de ingreso cuando el servidor responde que la sala es un reto
+// Se llama desde la pantalla de ingreso cuando el servidor acepta al estudiante
 function aplicarIngreso(respuesta, datos) {
   registrarEventos()
   guardarSesion({ nombre: datos.nombre, codigoEstudiante: datos.codigoEstudiante, codigoSala: respuesta.codigoSala })
   estado.reemplazada = false
-  aplicarVista(respuesta.reto)
+  aplicarVista(respuesta.competencia)
 }
 
 // Volver a entrar con la sesión guardada (al recargar la página o tras una reconexión)
@@ -77,9 +69,9 @@ function reingresar() {
   return new Promise((resolve) => {
     const enviar = () => s.emit('estudiante:unirse', sesion, (res) => {
       estado.reconectando = false
-      if (res?.ok && res.modo === 'reto') {
+      if (res?.ok) {
         estado.reemplazada = false
-        aplicarVista(res.reto)
+        aplicarVista(res.competencia)
       }
       resolve(res || { ok: false })
     })
@@ -90,7 +82,7 @@ function reingresar() {
 
 function salir() {
   try { sessionStorage.removeItem(CLAVE_SESION) } catch { /* ignorar */ }
-  estado.reto = null
+  estado.comp = null
   estado.cola = null
   estado.reemplazada = false
 }
@@ -107,9 +99,9 @@ function pedir(evento, datos) {
 }
 
 function avisarFoco(visible) {
-  socket()?.emit('estudiante:reto:foco', { visible })
+  socket()?.emit('estudiante:foco', { visible })
 }
 
-export function useReto() {
+export function useCompetencia() {
   return { estado, leerSesion, aplicarIngreso, reingresar, salir, pedir, avisarFoco, ahoraServidor }
 }

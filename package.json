@@ -1,7 +1,7 @@
 {
   "name": "hello-world-quiz-aceis",
   "version": "1.0.0",
-  "description": "Quiz interactivo tipo Kahoot y retos de programación (Python / C++) para ACEIS - Hello World",
+  "description": "Competencia de preguntas y retos de programación (Python / C++) para ACEIS - Hello World",
   "scripts": {
     "setup": "cd server && npm install && cd ../client && npm install",
     "build": "cd client && npm run build",
@@ -10,6 +10,7 @@
     "dev:client": "cd client && npm run dev",
     "piston:up": "docker compose -f piston/docker-compose.yml up -d",
     "piston:down": "docker compose -f piston/docker-compose.yml down",
-    "piston:prueba": "node piston/prueba-piston.mjs"
+    "piston:prueba": "node piston/prueba-piston.mjs",
+    "prueba": "node server/competencia/prueba-competencia.js"
   }
 }
