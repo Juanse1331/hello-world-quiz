@@ -218,7 +218,8 @@ El código se guarda automáticamente en el navegador: si el estudiante recarga 
 
 ### Reglas de calificación
 
-- **Preguntas:** los puntos de la pregunta (en el banco: fácil 15, medio 20, difícil 30) más un **bonus de hasta +50 %** por responder rápido. El bonus baja de forma lineal durante el tiempo propio de la pregunta.
+- **Bonus por tiempo sobrante (preguntas y retos):** cada ítem tiene su tiempo. Los **segundos que le sobren** al estudiante se multiplican por **0,1** y se suman a los puntos base. Ejemplo: un reto de 10 min resuelto en 5 min → 300 s × 0,1 = **+30 pts**. En una pregunta de 60 s respondida a los 20 s → 40 s × 0,1 = **+4 pts**. Solo se gana si la pregunta es **correcta** o el reto queda **Aceptado (100 %)**. El valor 0,1 se cambia en `BONUS_POR_SEGUNDO` (`server/competencia/index.js`).
+- **Preguntas:** los puntos de la pregunta (en el banco: fácil 15, medio 20, difícil 30) + el bonus por tiempo si es correcta.
 - **Retos — puntaje parcial:** `puntos del reto × (pruebas ocultas superadas / total de pruebas ocultas)`. **Los ejemplos visibles no dan puntos**: solo sirven para probar. Cuenta el **mejor** envío.
 - **Intentos:** cada envío que no pase el 100 % de las pruebas gasta un intento. **Los errores de compilación no gastan intentos.** Al agotarlos, el estudiante pasa al siguiente ítem y conserva su mejor puntaje.
 - **Desempate:** gana quien tenga **menor tiempo total**: lo que tardó en responder cada pregunta acertada más lo que tardó (desde que se le abrió) en lograr su mejor puntaje en cada reto. Si siguen empatados, gana quien tenga menos intentos fallidos.

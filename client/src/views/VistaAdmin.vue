@@ -343,9 +343,11 @@ function seleccionarFiltradas() {
 }
 const preguntasElegidas = computed(() => bancoPreguntas.value.filter(q => seleccionPreguntas.value.includes(q.id)))
 const problemasElegidos = computed(() => bancoProblemas.value.filter(p => seleccionProblemas.value.includes(p.id)))
-// Una pregunta correcta vale hasta +50 % por rapidez
+// Máximo posible: puntos base + bonus si respondiera/resolviera al instante (0,1 pts por segundo del tiempo del ítem)
+const BONUS_POR_SEGUNDO = 0.1
 const puntosPosibles = computed(() =>
-  preguntasElegidas.value.reduce((a, q) => a + Math.round(q.puntos * 1.5), 0) + problemasElegidos.value.reduce((a, p) => a + p.puntos, 0)
+  preguntasElegidas.value.reduce((a, q) => a + q.puntos + Math.round(q.tiempoS * BONUS_POR_SEGUNDO), 0) +
+  problemasElegidos.value.reduce((a, p) => a + p.puntos + Math.round(p.tiempoMin * 60 * BONUS_POR_SEGUNDO), 0)
 )
 const tiempoMaximoMs = computed(() =>
   preguntasElegidas.value.reduce((a, q) => a + q.tiempoS * 1000, 0) + problemasElegidos.value.reduce((a, p) => a + p.tiempoMin * 60000, 0)
@@ -514,7 +516,7 @@ async function exportarExcel() {
   ]
 
   const preguntas = [
-    encabezado(['Nombre', 'Código estudiante', 'Pregunta', 'Nivel', 'Respondió', 'Respuesta correcta', 'Resultado', 'Segundos', 'Puntos base', 'Bonus rapidez', 'Puntos']),
+    encabezado(['Nombre', 'Código estudiante', 'Pregunta', 'Nivel', 'Respondió', 'Respuesta correcta', 'Resultado', 'Segundos', 'Puntos base', 'Bonus tiempo', 'Puntos']),
     ...res.respuestas.flatMap(est => res.preguntas.map(q => {
       const r = est.respuestas[q.id]
       return [
@@ -534,7 +536,7 @@ async function exportarExcel() {
   ]
 
   const envios = [
-    encabezado(['Minuto en el reto', 'Nombre', 'Código estudiante', 'Reto', 'Lenguaje', 'Veredicto', 'Pruebas ocultas', 'Puntos', 'Mensaje', 'Código enviado']),
+    encabezado(['Minuto en el reto', 'Nombre', 'Código estudiante', 'Reto', 'Lenguaje', 'Veredicto', 'Pruebas ocultas', 'Puntos base', 'Bonus tiempo', 'Puntos', 'Mensaje', 'Código enviado']),
     ...res.envios.map(e => [
       { value: formatoReloj(e.tiempoMs) },
       { value: e.nombre },
@@ -543,6 +545,8 @@ async function exportarExcel() {
       { value: lenguajeLabel(e.lenguaje) },
       { value: veredictoInfo(e.veredicto).texto },
       { value: `${e.pasadas}/${e.total}` },
+      { value: e.puntosBase ?? e.puntos },
+      { value: e.bonus || 0 },
       { value: e.puntos },
       { value: (e.mensaje || '').slice(0, 1000) },
       { value: (e.codigo || '').slice(0, 30000), wrap: true }
@@ -553,7 +557,7 @@ async function exportarExcel() {
     { data: ranking, sheet: 'Ranking', columns: [{ width: 10 }, { width: 28 }, { width: 18 }, { width: 10 }, { width: 18 }, { width: 15 }, { width: 14 }, { width: 20 }, { width: 16 }, { width: 18 }, ...retos.map(() => ({ width: 22 }))] }
   ]
   if (res.preguntas.length) hojas.push({ data: preguntas, sheet: 'Preguntas', columns: [{ width: 26 }, { width: 18 }, { width: 50 }, { width: 10 }, { width: 28 }, { width: 28 }, { width: 14 }, { width: 10 }, { width: 12 }, { width: 14 }, { width: 8 }] })
-  if (res.problemas.length) hojas.push({ data: envios, sheet: 'Envíos', columns: [{ width: 16 }, { width: 26 }, { width: 18 }, { width: 28 }, { width: 10 }, { width: 22 }, { width: 14 }, { width: 8 }, { width: 40 }, { width: 70 }] })
+  if (res.problemas.length) hojas.push({ data: envios, sheet: 'Envíos', columns: [{ width: 16 }, { width: 26 }, { width: 18 }, { width: 28 }, { width: 10 }, { width: 22 }, { width: 14 }, { width: 12 }, { width: 14 }, { width: 8 }, { width: 40 }, { width: 70 }] })
 
   await writeExcelFile(hojas).toFile(`competencia-${comp.value.codigo}-${new Date().toISOString().slice(0, 10)}.xlsx`)
 }

@@ -45,7 +45,7 @@
           <li><Icon name="book" :size="16" /> Te saldrán <strong>{{ comp.totalPreguntas }} preguntas</strong><template v-if="comp.totalProblemas"> y <strong>{{ comp.totalProblemas }} retos de programación</strong></template>, mezclados en un orden distinto para cada estudiante.</li>
           <li><Icon name="clock" :size="16" /> Cada pregunta y cada reto tiene <strong>su propio tiempo</strong>. Cuando se acaba, pasas automáticamente al siguiente.</li>
           <li><Icon name="arrow-right" :size="16" /> <strong>No puedes volver atrás ni saltarte un ítem.</strong> Al responder una pregunta pasas a la siguiente.</li>
-          <li><Icon name="target" :size="16" /> En las preguntas, responder rápido da hasta <strong>+50 %</strong> de puntos. Sabrás al instante si acertaste; cuál era la opción correcta se revela al final.</li>
+          <li><Icon name="target" :size="16" /> Bonus por tiempo: cada segundo que te sobre al acertar una pregunta o resolver un reto al 100 % suma <strong>0,1 puntos</strong> (ej.: resolver en 5 min un reto de 10 min = +30 pts). Sabrás al instante si acertaste; cuál era la opción correcta se revela al final.</li>
           <template v-if="comp.totalProblemas">
             <li><Icon name="code" :size="16" /> Retos en <strong>{{ comp.lenguajes.map(lenguajeLabel).join(' o ') }}</strong>. <strong>Probar</strong> usa los ejemplos (ilimitado); <strong>Enviar</strong> califica con pruebas ocultas.</li>
             <li><Icon name="check-circle" :size="16" /> Un reto termina cuando lo resuelves al 100 %<template v-if="comp.intentosMax > 0">, cuando gastas tus <strong>{{ comp.intentosMax }} intentos fallidos</strong></template> o cuando se acaba su tiempo.</li>
@@ -89,7 +89,7 @@
         <div class="badges" style="margin-bottom: 12px;">
           <span class="badge" :class="'badge-' + item.pregunta.nivel">{{ nivelLabel(item.pregunta.nivel) }}</span>
           <span class="badge badge-tipo">{{ tipoLabel(item.pregunta.tipo) }}</span>
-          <span class="badge badge-puntos">hasta {{ Math.round(item.pregunta.puntos * 1.5) }} pts</span>
+          <span class="badge badge-puntos">{{ item.pregunta.puntos }} pts + bonus por tiempo</span>
         </div>
         <div class="card pregunta-card">
           <pre v-if="['IMP', 'ERR', 'COMP', 'DF'].includes(item.pregunta.tipo)" class="enunciado-codigo">{{ item.pregunta.enunciado }}</pre>
@@ -119,7 +119,7 @@
               <h2>{{ problema.titulo }}</h2>
               <div class="badges">
                 <span class="badge" :class="'badge-' + problema.nivel">{{ nivelLabel(problema.nivel) }}</span>
-                <span class="badge badge-tipo">{{ problema.puntos }} pts</span>
+                <span class="badge badge-tipo">{{ problema.puntos }} pts + bonus por tiempo</span>
                 <span class="badge badge-tipo">{{ problema.totalPruebas }} pruebas ocultas</span>
               </div>
               <p v-if="problema.tema" class="tema">{{ problema.tema }}</p>
@@ -208,7 +208,7 @@
                         <strong>{{ veredictoInfo(accionActiva.datos.veredicto).texto }}</strong>
                         <span v-if="accionActiva.datos.veredicto !== 'COMPILACION'"> · {{ accionActiva.datos.pasadas }} de {{ accionActiva.datos.total }} pruebas ocultas</span>
                       </div>
-                      <span class="veredicto-puntos">+{{ accionActiva.datos.puntos }} pts</span>
+                      <span class="veredicto-puntos">+{{ accionActiva.datos.puntos }} pts<small v-if="accionActiva.datos.bonus" class="veredicto-bonus">{{ accionActiva.datos.puntosBase }} + {{ accionActiva.datos.bonus }} por tiempo</small></span>
                     </div>
                     <div class="barra-pruebas">
                       <span v-for="i in accionActiva.datos.total" :key="i" :class="{ ok: i <= accionActiva.datos.pasadas }"></span>
@@ -431,7 +431,7 @@ async function responder(idx) {
   avanceEsperado = true
   const res = await pedir('estudiante:responder', { preguntaId: item.value.pregunta.id, respuesta: idx })
   if (res.ok) {
-    if (res.esCorrecta) mostrarSammy('correcto', `¡Correcto! +${res.puntos}`, res.bonus ? `${res.puntosBase} pts + ${res.bonus} por rapidez` : '')
+    if (res.esCorrecta) mostrarSammy('correcto', `¡Correcto! +${res.puntos}`, res.bonus ? `${res.puntosBase} pts + ${res.bonus} por tiempo sobrante` : '')
     else mostrarSammy('incorrecto', '¡Incorrecto!', 'La respuesta correcta se revela al final')
   } else {
     avanceEsperado = false
@@ -529,10 +529,10 @@ async function enviar() {
   ocupado.value = null
   if (!res.ok) { mensajeError.value = res.mensaje; return }
   accion.value = { tipo: 'envio', datos: res.envio }
-  const { veredicto, puntos, pasadas, total } = res.envio
+  const { veredicto, puntos, puntosBase, bonus, pasadas, total } = res.envio
   if (veredicto === 'ACEPTADO') {
     avanceEsperado = true
-    mostrarSammy('correcto', `¡Reto resuelto! +${puntos}`, 'Pasas al siguiente ítem...')
+    mostrarSammy('correcto', `¡Reto resuelto! +${puntos}`, bonus ? `${puntosBase} pts + ${bonus} por tiempo sobrante · Pasas al siguiente ítem...` : 'Pasas al siguiente ítem...')
   } else if (res.bloqueado) {
     avanceEsperado = true
     mostrarSammy('incorrecto', 'Sin intentos', `Conservas ${res.mejorPuntaje} pts. Pasas al siguiente ítem...`)
@@ -671,7 +671,8 @@ pre { background: #F3F5F9; border: 1px solid var(--color-border); border-radius:
 .spinner-sm { width: 24px; height: 24px; border-width: 3px; }
 
 .veredicto { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: var(--radius-sm); font-size: 15px; }
-.veredicto-puntos { margin-left: auto; font-weight: 800; font-size: 18px; }
+.veredicto-puntos { margin-left: auto; font-weight: 800; font-size: 18px; text-align: right; }
+.veredicto-bonus { display: block; font-size: 12px; font-weight: 600; opacity: 0.8; }
 .v-aceptado { background: var(--color-success-light); color: var(--color-success); }
 .v-parcial { background: #FFF3CD; color: #856404; }
 .v-error { background: var(--color-error-light); color: var(--color-error); }

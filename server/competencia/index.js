@@ -27,8 +27,12 @@ const MAX_CODIGO = 20000 // caracteres
 const HORAS_CONSERVAR_TERMINADOS = 24
 const TIEMPO_PREGUNTA_S = { facil: 45, medio: 60, dificil: 90 }
 const TIEMPO_PROBLEMA_MIN = { facil: 15, medio: 20, dificil: 30 }
-const BONUS_MAX = 0.5
+const BONUS_POR_SEGUNDO = 0.1
 
+function bonusTiempo(itemFin, momento){
+  const segundosSobrantes = Math.max(0, Math.floor((itemFin - momento) / 1000))
+  return Math.round(segundosSobrantes * BONUS_POR_SEGUNDO)
+}
 function texto(valor, max) {
   return typeof valor === 'string' ? valor.trim().slice(0, max) : ''
 }
@@ -536,11 +540,11 @@ function crearGestorCompetencias({ io, bancoPreguntas, bancoProblemas, adminToke
         return cb({ ok: false, mensaje: 'Respuesta inválida.' })
       }
 
-      // Bonus por rapidez: decae linealmente durante el tiempo propio de la pregunta
+      // Bonus por tiempo sobrante: segundos que le quedaban × 0,1
       const ms = ahora - p.itemInicio
       const esCorrecta = respuesta === q.respuesta_correcta
       const puntosBase = esCorrecta ? q.puntos : 0
-      const bonus = esCorrecta ? Math.round(q.puntos * BONUS_MAX * Math.max(0, 1 - ms / (p.itemFin - p.itemInicio))) : 0
+      const bonus = esCorrecta ? bonusTiempo(p.itemFin, ahora) : 0
       p.respuestas[q.id] = { respuesta, esCorrecta, puntos: puntosBase + bonus, puntosBase, bonus, ms }
 
       // Dice si acertó, pero no cuál era la correcta (eso se revela al final)
@@ -623,7 +627,10 @@ function crearGestorCompetencias({ io, bancoPreguntas, bancoProblemas, adminToke
           return cb({ ok: false, mensaje: 'El motor de ejecución falló y tu envío NO se contó. Intenta de nuevo. (' + r.mensaje + ')' })
         }
 
-        const puntos = r.total ? Math.round(v.problema.puntos * r.pasadas / r.total) : 0
+        const puntosBase = r.total ? Math.round(v.problema.puntos * (r.pasadas / r.total)) : 0
+        // Garantizamos que el bonus se de solo si el estudainte hizo y terino el punbto correctamente
+        const bonus = r.veredicto === 'ACEPTADO' ? bonusTiempo(p.itemFin, tsEnvio) : 0
+        const puntos = puntosBase + bonus
         e.envios++
         if (r.veredicto !== 'ACEPTADO' && r.veredicto !== 'COMPILACION') e.intentosFallidos++
         if (puntos > e.puntos) {
