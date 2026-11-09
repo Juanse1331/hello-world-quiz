@@ -9,7 +9,7 @@ Es **una sola competencia** que mezcla dos tipos de ítems:
 | **Pregunta** | Selección múltiple, verdadero/falso, "¿qué imprime?", encontrar el error... |
 | **Reto de programación** | El estudiante escribe código en **Python o C++** y el sistema lo califica solo, con pruebas ocultas |
 
-El profesor elige qué preguntas y qué retos entran. **A cada estudiante le salen todos mezclados en un orden aleatorio distinto**, cada ítem con **su propio tiempo**, y avanza a su ritmo sin poder volver atrás.
+El profesor elige qué preguntas y qué retos entran. **A cada estudiante le salen todos mezclados en un orden aleatorio distinto**, cada ítem con **su propio tiempo**, y avanza a su ritmo sin poder volver atrás. Los retos de programación se pueden **saltar** y retomar al final.
 
 > El historial de cambios y correcciones está en [docs/CORRECCIONES-MEJORAS.md](docs/CORRECCIONES-MEJORAS.md).
 
@@ -77,7 +77,9 @@ hello-world-quiz/
 │       ├── calificador.js        ← compara la salida del estudiante con la esperada
 │       ├── cola.js               ← limita cuántos envíos se califican a la vez
 │       ├── ranking.js            ← puntos y desempate por tiempo
-│       └── prueba-competencia.js ← prueba automática de las reglas (npm run prueba)
+│       ├── prueba-competencia.js ← prueba automática de las reglas (npm run prueba)
+│       ├── prueba-saltar.js      ← prueba de saltar / retomar retos
+│       └── prueba-carga.js       ← prueba con 20 estudiantes y un motor lento
 └── client/src/
     ├── views/
     │   ├── VistaIngreso.vue      ← pantalla de entrada del estudiante
@@ -148,7 +150,8 @@ Archivo `server/.env`:
 | `PISTON_URL` | `http://127.0.0.1:2000` | Dónde está Piston |
 | `RETO_ENVIOS_SIMULTANEOS` | `4` | Cuántos envíos se califican al mismo tiempo. Súbelo si el PC es potente; bájalo si se pone lento |
 | `RETO_PRUEBAS_PARALELAS` | `3` | Cuántas pruebas de un mismo envío corren en paralelo |
-| `RETO_ESPERA_ENVIO_S` | `10` | Segundos mínimos entre dos envíos del mismo estudiante (evita saturar el servidor) |
+| `RETO_ESPERA_ENVIO_S` | `3` | Segundos mínimos entre dos envíos **del mismo reto**, contados desde que termina la calificación anterior |
+| `RETO_MARGEN_RELOJ_MS` | `6000` | Margen de tiempo real que se da a cada programa sobre su límite de CPU (ver *Límites por ejecución*) |
 
 Los **tiempos de cada pregunta y reto no se configuran aquí**: están en los bancos (ver [sección 7](#7-agregar-preguntas-y-retos)).
 
@@ -206,8 +209,11 @@ Entra a la dirección del servidor, escribe su nombre, su código de estudiante 
   - **Izquierda:** el enunciado, el formato de entrada y salida, y los ejemplos.
   - **Derecha:** el **editor de código** (con colores, números de línea y Tab para indentar) y una consola con tres pestañas: **Resultado**, **Mi propia entrada** y **Mis envíos**.
   - Pasa al siguiente ítem cuando **lo resuelve al 100 %**, cuando **agota sus intentos** o cuando **se acaba su tiempo**. Si no lo resuelve por completo, conserva su mejor puntaje. Sammy también aparece al enviar: celebra si lo resolvió y se pone triste si no.
+  - **Saltar reto:** si no lo sabe o no quiere gastar tiempo en él, lo salta y pasa al siguiente ítem. El reto queda **pendiente** con el tiempo que le quedaba y con lo que ya había enviado. Al terminar los demás ítems ve la lista de **retos pendientes** y elige a cuál volver (**Resolver ahora**) o **Terminar sin resolverlos**. Al retomar, su reloj sigue donde quedó, y el tiempo que ya había usado cuenta para el desempate. Las preguntas no se pueden saltar.
+  - Debajo del formato de entrada ve **cómo llega la entrada del ejemplo, línea por línea** (cuántos valores trae cada línea) y una explicación de cómo leerla en el lenguaje que eligió.
+  - En las preguntas de **completar** con varios espacios, cada espacio del código tiene un **número y un color**, y las opciones se muestran como fichas del mismo color.
 
-**No puede volver atrás ni saltarse un ítem.** Al responder sabe si acertó, pero **cuál era la opción correcta** y el ranking **se revelan al final** (así nadie puede pasarle la respuesta a un compañero al que todavía no le ha salido esa pregunta). Al terminar ve su posición, el podio y la revisión de cada pregunta con su explicación.
+**No puede volver atrás** (salvo a los retos que saltó). Al responder sabe si acertó, pero **cuál era la opción correcta** y el ranking **se revelan al final** (así nadie puede pasarle la respuesta a un compañero al que todavía no le ha salido esa pregunta). Al terminar ve su posición, el podio y la revisión de cada pregunta con su explicación.
 
 | Botón (retos) | Qué hace | ¿Gasta intentos? |
 |---|---|---|
@@ -218,7 +224,8 @@ El código se guarda automáticamente en el navegador: si el estudiante recarga 
 
 ### Reglas de calificación
 
-- **Preguntas:** los puntos de la pregunta (en el banco: fácil 15, medio 20, difícil 30) más un **bonus de hasta +50 %** por responder rápido. El bonus baja de forma lineal durante el tiempo propio de la pregunta.
+- **Bonus por tiempo sobrante (preguntas y retos):** cada ítem tiene su tiempo. Los **segundos que le sobren** al estudiante se multiplican por **0,1** y se suman a los puntos base. Ejemplo: un reto de 10 min resuelto en 5 min → 300 s × 0,1 = **+30 pts**. En una pregunta de 60 s respondida a los 20 s → 40 s × 0,1 = **+4 pts**. Solo se gana si la pregunta es **correcta** o el reto queda **Aceptado (100 %)**. El valor 0,1 se cambia en `BONUS_POR_SEGUNDO` (`server/competencia/index.js`).
+- **Preguntas:** los puntos de la pregunta (en el banco: fácil 15, medio 20, difícil 30) + el bonus por tiempo si es correcta.
 - **Retos — puntaje parcial:** `puntos del reto × (pruebas ocultas superadas / total de pruebas ocultas)`. **Los ejemplos visibles no dan puntos**: solo sirven para probar. Cuenta el **mejor** envío.
 - **Intentos:** cada envío que no pase el 100 % de las pruebas gasta un intento. **Los errores de compilación no gastan intentos.** Al agotarlos, el estudiante pasa al siguiente ítem y conserva su mejor puntaje.
 - **Desempate:** gana quien tenga **menor tiempo total**: lo que tardó en responder cada pregunta acertada más lo que tardó (desde que se le abrió) en lograr su mejor puntaje en cada reto. Si siguen empatados, gana quien tenga menos intentos fallidos.
@@ -226,7 +233,8 @@ El código se guarda automáticamente en el navegador: si el estudiante recarga 
 - **Comparación de salidas:** se ignoran los espacios repetidos, los espacios al final de cada línea y las líneas vacías al inicio o al final. **Sí** se distinguen mayúsculas y minúsculas (`PAR` ≠ `par`).
 - **Mensajes de `input()` en Python:** el texto de `input("Ingrese un número")` **no se imprime**, para que no se mezcle con la respuesta. En C++ el estudiante no debe imprimir mensajes con `cout`, solo la respuesta.
 - **Errores comunes:** si el programa intenta leer más líneas de las que tiene la entrada (`EOFError`) o suma texto en vez de números, el mensaje de error incluye una pista en español.
-- **Límites por ejecución:** 2 s de tiempo (configurable por reto), 256 MB de memoria y sin acceso a internet.
+- **Límites por ejecución:** 2 s de **tiempo de CPU** (configurable por reto con `limite_tiempo_ms`), 256 MB de memoria y sin acceso a internet. El límite se mide en tiempo de CPU —lo que trabaja el programa— y no en tiempo de reloj: con 20 o más estudiantes el PC se satura y un programa correcto puede tardar más en tiempo real; antes eso se marcaba como "Tiempo excedido" y gastaba un intento. Para esto `piston/docker-compose.yml` amplía los límites de Piston (si no se ha aplicado, el panel del profesor lo avisa).
+- **Cola de calificación:** los envíos se califican **antes** que los "Probar". Al pulsar Probar o Enviar, el servidor confirma al instante y el estudiante ve su posición en la cola; el resultado llega cuando termina, aunque se haya recargado la página. Si el tiempo de un reto se acaba mientras su envío espera en la cola, **el envío se califica igual** y el resultado se le muestra en el ítem siguiente.
 
 ### ¿Por qué no se puede hacer trampa imprimiendo el resultado?
 
@@ -238,23 +246,39 @@ Las pruebas ocultas **nunca salen del servidor**: el navegador del estudiante so
 
 ## 7. Agregar preguntas y retos
 
+Los bancos tienen el **banco seleccionado para la Copa Hello World (Fase 2)**, con los códigos del documento del equipo académico:
+
+| Ronda / uso (campo `tema`) | Preguntas | Retos de programación |
+|---|---|---|
+| Ronda 1 · Calentamiento | F1–F8 | — |
+| Ronda 2 · Media | M1–M7 | M8 *Contar positivos* |
+| Ronda 3 · Difícil | D3–D7 | D1 *La tienda de la asociación*, D2 *El mejor vendedor* |
+| Desempate | R1, R2 | — |
+| Reserva | R3, R4, R5 | R6 *Edades válidas* |
+
+En el panel, el filtro **"Todas las rondas"** permite elegir una ronda y pulsar **"Seleccionar las N visibles"**. Las preguntas que en el documento eran abiertas (¿qué imprime?, ordenar, relacionar, encontrar el error, completar) se convirtieron a selección múltiple, con la respuesta de la clave y distractores basados en errores típicos. M8, D1, D2 y R6 (que eran para responder en hoja) son retos de código calificados con pruebas ocultas.
+
 ### Preguntas: `server/data/banco_preguntas.json`
 
 ```json
 {
-  "id": 31, "nivel": "facil", "tipo": "SM", "puntos": 15, "tiempo_segundos": 45,
-  "enunciado": "¿Qué imprime print(2 + 3 * 2)?",
-  "opciones": ["10", "8", "7", "12"],
-  "respuesta_correcta": 1,
-  "explicacion": "La multiplicación va primero: 3*2 = 6, luego 2 + 6 = 8.",
-  "tema": "3.3 Operadores aritméticos"
+  "id": "F6", "nivel": "facil", "tipo": "IMP", "puntos": 15, "tiempo_segundos": 120,
+  "enunciado": "¿Qué imprime el siguiente pseudocódigo?\n\na = 10\nb = 3\nWRITE a MOD b\nWRITE a DIV b",
+  "opciones": ["3 y luego 1", "1 y luego 3.33", "0.33 y luego 3", "1 y luego 3"],
+  "respuesta_correcta": 3,
+  "explicacion": "MOD es el residuo de 10 ÷ 3 (1); DIV es la división entera (3).",
+  "tema": "Ronda 1 · Calentamiento"
 }
 ```
 
+- `id`: código único (se muestra en el panel del profesor y en el Excel). Puede ser texto, como los del documento (`F1`, `M2`…).
 - `tiempo_segundos`: tiempo que tiene el estudiante para responder **esa** pregunta. Si falta, se usa el del nivel: fácil 45 s, medio 60 s, difícil 90 s.
+- `tema`: se usa para filtrar en el panel (aquí, la ronda).
 - `respuesta_correcta` es la **posición** de la opción, contando desde 0.
 - `tipo`: `SM` selección múltiple, `VF` verdadero/falso, `IMP` ¿qué imprime?, `ERR` encontrar el error, `COMP` completar, `DF` diagrama.
-- `nivel`: `facil`, `medio` o `dificil`.
+- `nivel`: `facil`, `medio` o `dificil`. **Al estudiante no se le muestra** (para no desanimarlo antes de leer); solo lo ve el profesor. Tampoco ve el `tema` (la ronda).
+- **Completar con varios espacios (`COMP`):** en el enunciado marca cada espacio como `__(1)__`, `__(2)__`… y escribe cada opción como `"(1) valor · (2) valor"`. La pantalla pinta cada espacio y su ficha del mismo color, así un `/` o un `·` nunca se confunde con parte de la respuesta.
+- **Que la opción correcta no se delate:** las opciones deben tener una longitud y un nivel de detalle parecidos. Un error común (sobre todo al generar preguntas con IA) es que la correcta sea la única larga y con explicación ("…porque…"); los estudiantes la eligen sin pensar. Pon la explicación en `explicacion`, no en la opción.
 
 ### Retos: `server/data/banco_problemas.json`
 
@@ -286,7 +310,8 @@ Las pruebas ocultas **nunca salen del servidor**: el navegador del estudiante so
 ```
 
 - `tiempo_minutos`: tiempo que tiene el estudiante para desarrollar **ese** reto. Si falta, se usa el del nivel: fácil 15 min, medio 20 min, difícil 30 min.
-- `limite_tiempo_ms`: cuánto puede tardar **cada ejecución** del programa (para cortar ciclos infinitos). No es lo mismo que `tiempo_minutos`.
+- `limite_tiempo_ms`: cuánto tiempo de CPU puede usar **cada ejecución** del programa (para cortar ciclos infinitos). No es lo mismo que `tiempo_minutos`.
+- `ayuda_entrada` (opcional): `{ "python": "...", "cpp": "..." }` con una explicación de **cómo leer la entrada** en cada lenguaje. Se muestra debajo del formato de entrada, junto con la entrada del ejemplo línea por línea. Si falta, se muestra una explicación general según cuántos valores trae cada línea del ejemplo. Vale la pena escribirla en los retos con **varias entradas** (varios números por línea, o hasta encontrar un 0 / -1).
 
 **Consejos para escribir buenas pruebas:**
 
@@ -297,7 +322,7 @@ Las pruebas ocultas **nunca salen del servidor**: el navegador del estudiante so
 5. Mantén las salidas cortas (menos de 1000 caracteres por prueba).
 6. Después de editar el archivo, reinicia el servidor y **prueba el reto tú mismo** creando una competencia de prueba.
 
-Los 8 retos incluidos (suma, par/impar, mayor de tres, suma 1..N, vocales, FizzBuzz, primos y palíndromo) tienen sus salidas generadas con soluciones de referencia.
+Los 4 retos incluidos (M8, D1, D2, R6) tienen sus salidas generadas con soluciones de referencia y se comprobaron con una solución de estudiante en Python. Los 8 retos de práctica anteriores (suma, par/impar, FizzBuzz…) siguen en el historial de git: `git show 6ce4e85:server/data/banco_problemas.json`.
 
 ---
 
@@ -327,9 +352,10 @@ npm run prueba
 | Profesor | `admin:competencia:crear`, `admin:competencia:iniciar`, `admin:competencia:terminar`, `admin:competencia:exportar`, `admin:competencia:reconectar` | Manejar la competencia |
 | Estudiante | `estudiante:unirse` | Entrar (o volver a entrar) a la competencia |
 | Estudiante | `estudiante:responder` | Responder la pregunta actual |
-| Estudiante | `estudiante:probar`, `estudiante:enviar` | Probar o enviar el código del reto actual |
+| Estudiante | `estudiante:probar`, `estudiante:enviar` | Probar o enviar el código del reto actual (responden al instante; el resultado llega con `competencia:resultado`) |
+| Estudiante | `estudiante:saltar`, `estudiante:retomar`, `estudiante:finalizar` | Saltar el reto actual, volver a un reto pendiente o terminar sin resolverlos |
 | Estudiante | `estudiante:foco` | Avisar que salió de la pestaña |
-| Servidor | `competencia:mi-estado`, `competencia:cola`, `competencia:sesion-reemplazada` | Actualizaciones para el estudiante |
+| Servidor | `competencia:mi-estado`, `competencia:cola`, `competencia:resultado`, `competencia:sesion-reemplazada` | Actualizaciones para el estudiante |
 | Servidor | `competencia:admin-estado` | Actualizaciones para el panel del profesor |
 
 Rutas HTTP del profesor (piden la cabecera `x-admin-token`): `GET /api/admin/banco` y `GET /api/admin/motor`. Sin el token, o en cualquier otra ruta `/api/...`, responden **401**: JSON si la pide el panel, o la página de Sammy si se abre en el navegador.
@@ -357,7 +383,8 @@ La pausa del servidor para mostrar el resultado se ajusta con `pausaResultadoMs`
 | Piston se reinicia en bucle: *"Cgroup v2 not found"* | Docker está usando cgroup v1. Crea `C:\Users\<tu-usuario>\.wslconfig` con `[wsl2]` y `kernelCommandLine = cgroup_no_v1=all systemd.unified_cgroup_hierarchy=1`, cierra Docker, ejecuta `wsl --shutdown`, abre Docker y verifica con `docker info` que diga `Cgroup Version: 2`. Detalles en [docs/CORRECCIONES-MEJORAS.md](docs/CORRECCIONES-MEJORAS.md). |
 | `docker compose` dice *"no configuration file provided"* | Se corrió desde la carpeta equivocada. Usa `npm run piston:up` desde la raíz del proyecto. |
 | "Python/C++ no está instalado en Piston" | Ejecuta `npm run piston:prueba`: instala los lenguajes que falten. |
-| Los envíos tardan mucho / aparece "En cola" | Normal si muchos envían a la vez. Si el PC lo aguanta, sube `RETO_ENVIOS_SIMULTANEOS` en `server/.env` y reinicia el servidor. |
+| Los envíos tardan mucho / aparece "En cola" | Normal si muchos envían a la vez: el estudiante ve su posición y el resultado le llega aunque cambie de ítem. Si el PC lo aguanta, sube `RETO_ENVIOS_SIMULTANEOS` en `server/.env` y reinicia el servidor; si se pone lento, bájalo. |
+| Programas correctos salen con "Tiempo excedido" cuando hay muchos estudiantes | Aplica la configuración de Piston: `npm run piston:up` (recrea el contenedor con los límites de `piston/docker-compose.yml`; Python y C++ siguen instalados). El panel del profesor avisa "límites de tiempo básicos" mientras no esté aplicada. |
 | "La sesión expiró" en el panel | El servidor se reinició. Ingresa la contraseña otra vez; la competencia activa se recupera sola. |
 | Cambié el código del cliente y no veo los cambios | Ejecuta `npm run build` y recarga con `Ctrl + F5`. |
 | Un estudiante recargó la página o se le cayó el WiFi | Vuelve a entrar solo. Si no, que ingrese con el **mismo nombre y código de estudiante** y el mismo código de sala: conserva todo su progreso. Su reloj siguió corriendo mientras estaba fuera. |

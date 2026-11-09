@@ -28,13 +28,26 @@ async function ejecutar({ codigo, entrada }) {
 
 // Socket.io falso: guarda el último 'mi-estado' que recibe cada socket
 const ultimo = {}
-const io = { to: (id) => ({ emit: (ev, datos) => { if (ev === 'competencia:mi-estado') ultimo[id] = datos } }) }
+// y entrega los 'resultado' (de Probar / Enviar) a quien los esté esperando
+const esperandoResultado = {}
+const io = { to: (id) => ({ emit: (ev, datos) => {
+  if (ev === 'competencia:mi-estado') ultimo[id] = datos
+  if (ev === 'competencia:resultado' && esperandoResultado[id]) { const r = esperandoResultado[id]; delete esperandoResultado[id]; r(datos) }
+} }) }
 let contador = 0
 function socketFalso() {
   const handlers = {}
   return { id: 's' + (++contador), data: {}, on: (ev, fn) => { handlers[ev] = fn }, join() {}, handlers }
 }
 const llamar = (s, ev, datos) => new Promise(r => s.handlers[ev](datos, r))
+// Enviar/Probar responden de inmediato ({ ok, enCola }) y el resultado llega después
+async function calificar(s, ev, datos) {
+  const resultado = new Promise(r => { esperandoResultado[s.id] = r })
+  const ack = await llamar(s, ev, datos)
+  if (!ack.ok) { delete esperandoResultado[s.id]; return ack }
+  assert.ok(ack.enCola, 'confirma que lo recibió')
+  return resultado
+}
 
 function nuevoGestor() {
   return crearGestorCompetencias({
@@ -79,11 +92,12 @@ function nuevoGestor() {
       await esperar(80)
     } else {
       // Imprimir fijo el resultado del ejemplo: 0 puntos y no avanza
-      let e = await llamar(s0, 'estudiante:enviar', { problemaId: 'P01', lenguaje: 'python', codigo: 'print(10)' })
+      let e = await calificar(s0, 'estudiante:enviar', { problemaId: 'P01', lenguaje: 'python', codigo: 'print(10)' })
       assert.strictEqual(e.envio.puntos, 0, 'print(10) no da puntos')
       assert.strictEqual(e.envio.veredicto, 'INCORRECTO')
       assert.strictEqual(ultimo[s0.id].item.numero, paso, 'sigue en el problema')
-      e = await llamar(s0, 'estudiante:enviar', { problemaId: 'P01', lenguaje: 'python', codigo: 'suma' })
+      await esperar(10) // espera mínima entre envíos (0 en esta prueba)
+      e = await calificar(s0, 'estudiante:enviar', { problemaId: 'P01', lenguaje: 'python', codigo: 'suma' })
       assert.strictEqual(e.envio.veredicto, 'ACEPTADO')
       assert.strictEqual(e.envio.puntos, 100)
       await esperar(80)

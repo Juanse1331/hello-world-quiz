@@ -7,7 +7,8 @@ const CLAVE_SESION = 'competencia-sesion'
 const estado = reactive({
   comp: null,          // vista que envía el servidor (ítem actual, puntos, ranking y resumen al final)
   offsetReloj: 0,      // diferencia entre el reloj del servidor y el del navegador
-  cola: null,          // { tipo: 'envio' | 'prueba', posicion }
+  cola: null,          // { posicion } mientras su código espera en la cola de calificación
+  resultado: null,     // último resultado de Probar / Enviar que llegó del servidor (con 'recibido' = Date.now())
   reemplazada: false,  // el estudiante abrió la competencia en otra pestaña
   reconectando: false
 })
@@ -44,6 +45,8 @@ function registrarEventos() {
     aplicarVista(vista)
   })
   s.on('competencia:cola', (info) => { estado.cola = info })
+  // Probar y Enviar se califican en una cola: el resultado llega aparte, cuando termina
+  s.on('competencia:resultado', (datos) => { estado.resultado = { ...datos, recibido: Date.now() } })
   s.on('competencia:sesion-reemplazada', () => { estado.reemplazada = true })
   // Si se cae el WiFi y el socket se reconecta, volver a entrar automáticamente
   s.on('connect', () => {
@@ -84,15 +87,17 @@ function salir() {
   try { sessionStorage.removeItem(CLAVE_SESION) } catch { /* ignorar */ }
   estado.comp = null
   estado.cola = null
+  estado.resultado = null
   estado.reemplazada = false
 }
 
-// Envía un evento al servidor y espera su respuesta como promesa
+// Envía un evento al servidor y espera su respuesta como promesa.
+// El servidor responde enseguida (incluso Probar y Enviar, que solo confirman que quedaron en la cola).
 function pedir(evento, datos) {
   return new Promise((resolve) => {
     const s = socket()
     if (!s?.connected) return resolve({ ok: false, mensaje: 'Sin conexión con el servidor.' })
-    s.timeout(120000).emit(evento, datos, (err, res) => {
+    s.timeout(20000).emit(evento, datos, (err, res) => {
       resolve(err ? { ok: false, mensaje: 'El servidor tardó demasiado en responder.' } : res)
     })
   })

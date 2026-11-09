@@ -1,377 +1,209 @@
 [
   {
-    "id": "P01",
-    "titulo": "Suma de dos números",
-    "nivel": "facil",
-    "puntos": 100,
-    "tema": "3.3 Operadores aritméticos",
-    "enunciado": "Lee dos números enteros a y b e imprime su suma.",
-    "formato_entrada": "Una línea con dos enteros a y b separados por un espacio (-10^9 ≤ a, b ≤ 10^9).",
-    "formato_salida": "Un único entero: el valor de a + b.",
+    "id": "M8",
+    "titulo": "Contar positivos",
+    "nivel": "medio",
+    "puntos": 20,
+    "tema": "Ronda 2 · Media",
+    "enunciado": "Escribe un programa que lea 5 números enteros y muestre cuántos de ellos son positivos (mayores que 0).\n\nEl cero no es positivo.",
+    "formato_entrada": "5 líneas, cada una con un número entero (entre -1 000 000 y 1 000 000).",
+    "ayuda_entrada": {
+      "python": "son 5 líneas y cada una trae UN número. Cada int(input()) lee una línea, así que necesitas 5 lecturas; lo más cómodo es dentro de un ciclo: for i in range(5): numero = int(input())",
+      "cpp": "son 5 números, uno por línea. Dentro de un ciclo que se repita 5 veces haz cin >> numero; (cin no necesita saber que están en líneas distintas)."
+    },
+    "formato_salida": "Un único entero: la cantidad de números positivos.",
     "limite_tiempo_ms": 2000,
-    "tiempo_minutos": 15,
+    "tiempo_minutos": 4,
     "plantilla": {
-      "python": "a, b = map(int, input().split())\n# Escribe tu solución aquí\n",
-      "cpp": "#include <iostream>\n#include <string>\nusing namespace std;\n\nint main() {\n    // Lee la entrada con cin y escribe la respuesta con cout\n    long long a, b;\n    cin >> a >> b;\n\n    return 0;\n}\n"
+      "python": "# Lee 5 números, uno por línea, con int(input())\n# Escribe tu solución aquí\n",
+      "cpp": "#include <iostream>\nusing namespace std;\n\nint main() {\n    // Lee 5 números con cin y muestra con cout cuántos son positivos\n\n    return 0;\n}\n"
     },
     "ejemplos": [
       {
-        "entrada": "3 7",
-        "salida": "10"
+        "entrada": "3\n-1\n0\n7\n2",
+        "salida": "3"
       }
     ],
     "pruebas_ocultas": [
       {
-        "entrada": "-5 2",
-        "salida": "-3"
-      },
-      {
-        "entrada": "0 0",
+        "entrada": "-1\n-2\n-3\n-4\n-5",
         "salida": "0"
       },
       {
-        "entrada": "1000000000 1000000000",
-        "salida": "2000000000"
+        "entrada": "1\n2\n3\n4\n5",
+        "salida": "5"
       },
       {
-        "entrada": "-8 -12",
-        "salida": "-20"
-      },
-      {
-        "entrada": "123456 654321",
-        "salida": "777777"
-      }
-    ]
-  },
-  {
-    "id": "P02",
-    "titulo": "¿Par o impar?",
-    "nivel": "facil",
-    "puntos": 100,
-    "tema": "4.2 If-else",
-    "enunciado": "Lee un número entero n e indica si es par o impar.",
-    "formato_entrada": "Una línea con un entero n (-10^9 ≤ n ≤ 10^9).",
-    "formato_salida": "La palabra PAR si n es par, o IMPAR si no lo es (en mayúsculas).",
-    "limite_tiempo_ms": 2000,
-    "tiempo_minutos": 15,
-    "plantilla": {
-      "python": "n = int(input())\n# Escribe tu solución aquí\n",
-      "cpp": "#include <iostream>\n#include <string>\nusing namespace std;\n\nint main() {\n    // Lee la entrada con cin y escribe la respuesta con cout\n    long long n;\n    cin >> n;\n\n    return 0;\n}\n"
-    },
-    "ejemplos": [
-      {
-        "entrada": "4",
-        "salida": "PAR"
-      },
-      {
-        "entrada": "7",
-        "salida": "IMPAR"
-      }
-    ],
-    "pruebas_ocultas": [
-      {
-        "entrada": "0",
-        "salida": "PAR"
-      },
-      {
-        "entrada": "-3",
-        "salida": "IMPAR"
-      },
-      {
-        "entrada": "-10",
-        "salida": "PAR"
-      },
-      {
-        "entrada": "999999999",
-        "salida": "IMPAR"
-      },
-      {
-        "entrada": "1000000000",
-        "salida": "PAR"
-      }
-    ]
-  },
-  {
-    "id": "P03",
-    "titulo": "El mayor de tres",
-    "nivel": "facil",
-    "puntos": 100,
-    "tema": "4.4 Condicionales anidados",
-    "enunciado": "Lee tres números enteros e imprime el mayor de ellos.",
-    "formato_entrada": "Una línea con tres enteros a, b y c separados por espacios (-10^6 ≤ a, b, c ≤ 10^6).",
-    "formato_salida": "Un único entero: el mayor de los tres.",
-    "limite_tiempo_ms": 2000,
-    "tiempo_minutos": 15,
-    "plantilla": {
-      "python": "a, b, c = map(int, input().split())\n# Escribe tu solución aquí\n",
-      "cpp": "#include <iostream>\n#include <string>\nusing namespace std;\n\nint main() {\n    // Lee la entrada con cin y escribe la respuesta con cout\n    int a, b, c;\n    cin >> a >> b >> c;\n\n    return 0;\n}\n"
-    },
-    "ejemplos": [
-      {
-        "entrada": "4 9 2",
-        "salida": "9"
-      }
-    ],
-    "pruebas_ocultas": [
-      {
-        "entrada": "7 7 7",
-        "salida": "7"
-      },
-      {
-        "entrada": "-1 -5 -3",
-        "salida": "-1"
-      },
-      {
-        "entrada": "10 2 10",
-        "salida": "10"
-      },
-      {
-        "entrada": "0 -1 -2",
+        "entrada": "0\n0\n0\n0\n0",
         "salida": "0"
       },
       {
-        "entrada": "5 5 6",
-        "salida": "6"
-      },
-      {
-        "entrada": "-1000000 1000000 0",
-        "salida": "1000000"
-      }
-    ]
-  },
-  {
-    "id": "P04",
-    "titulo": "Suma de 1 hasta N",
-    "nivel": "medio",
-    "puntos": 150,
-    "tema": "5.3 For + acumulador",
-    "enunciado": "Lee un número entero N e imprime la suma 1 + 2 + 3 + ... + N.",
-    "formato_entrada": "Una línea con un entero N (1 ≤ N ≤ 1 000 000).",
-    "formato_salida": "Un único entero: la suma de los números de 1 a N.",
-    "limite_tiempo_ms": 2000,
-    "tiempo_minutos": 20,
-    "plantilla": {
-      "python": "n = int(input())\n# Escribe tu solución aquí\n",
-      "cpp": "#include <iostream>\n#include <string>\nusing namespace std;\n\nint main() {\n    // Lee la entrada con cin y escribe la respuesta con cout\n    long long n;\n    cin >> n;\n\n    return 0;\n}\n"
-    },
-    "ejemplos": [
-      {
-        "entrada": "5",
-        "salida": "15"
-      }
-    ],
-    "pruebas_ocultas": [
-      {
-        "entrada": "1",
-        "salida": "1"
-      },
-      {
-        "entrada": "10",
-        "salida": "55"
-      },
-      {
-        "entrada": "100",
-        "salida": "5050"
-      },
-      {
-        "entrada": "999",
-        "salida": "499500"
-      },
-      {
-        "entrada": "1000000",
-        "salida": "500000500000"
-      }
-    ]
-  },
-  {
-    "id": "P05",
-    "titulo": "Contar vocales",
-    "nivel": "medio",
-    "puntos": 150,
-    "tema": "5.3 Ciclo for",
-    "enunciado": "Lee una línea de texto y cuenta cuántas vocales (a, e, i, o, u) tiene, sin importar si están en mayúscula o minúscula. El texto no tiene tildes.",
-    "formato_entrada": "Una línea de texto (puede tener espacios), de máximo 1000 caracteres.",
-    "formato_salida": "Un único entero: la cantidad de vocales del texto.",
-    "limite_tiempo_ms": 2000,
-    "tiempo_minutos": 20,
-    "plantilla": {
-      "python": "texto = input()\n# Escribe tu solución aquí\n",
-      "cpp": "#include <iostream>\n#include <string>\nusing namespace std;\n\nint main() {\n    // Lee la entrada con cin y escribe la respuesta con cout\n    string texto;\n    getline(cin, texto);\n\n    return 0;\n}\n"
-    },
-    "ejemplos": [
-      {
-        "entrada": "Hola Mundo",
-        "salida": "4"
-      }
-    ],
-    "pruebas_ocultas": [
-      {
-        "entrada": "xyz",
-        "salida": "0"
-      },
-      {
-        "entrada": "AEIOU aeiou",
-        "salida": "10"
-      },
-      {
-        "entrada": "Programar es divertido",
-        "salida": "8"
-      },
-      {
-        "entrada": "a",
-        "salida": "1"
-      },
-      {
-        "entrada": "Murcielago HELLO world",
-        "salida": "8"
-      }
-    ]
-  },
-  {
-    "id": "P06",
-    "titulo": "FizzBuzz",
-    "nivel": "medio",
-    "puntos": 150,
-    "tema": "5.3 For + lógica",
-    "enunciado": "Lee un número N e imprime los números del 1 al N, uno por línea, con estas reglas: si el número es múltiplo de 3 imprime Fizz, si es múltiplo de 5 imprime Buzz y si es múltiplo de 3 y de 5 imprime FizzBuzz.",
-    "formato_entrada": "Una línea con un entero N (1 ≤ N ≤ 100).",
-    "formato_salida": "N líneas siguiendo las reglas.",
-    "limite_tiempo_ms": 2000,
-    "tiempo_minutos": 20,
-    "plantilla": {
-      "python": "n = int(input())\n# Escribe tu solución aquí\n",
-      "cpp": "#include <iostream>\n#include <string>\nusing namespace std;\n\nint main() {\n    // Lee la entrada con cin y escribe la respuesta con cout\n    int n;\n    cin >> n;\n\n    return 0;\n}\n"
-    },
-    "ejemplos": [
-      {
-        "entrada": "5",
-        "salida": "1\n2\nFizz\n4\nBuzz"
-      }
-    ],
-    "pruebas_ocultas": [
-      {
-        "entrada": "1",
-        "salida": "1"
-      },
-      {
-        "entrada": "15",
-        "salida": "1\n2\nFizz\n4\nBuzz\nFizz\n7\n8\nFizz\nBuzz\n11\nFizz\n13\n14\nFizzBuzz"
-      },
-      {
-        "entrada": "16",
-        "salida": "1\n2\nFizz\n4\nBuzz\nFizz\n7\n8\nFizz\nBuzz\n11\nFizz\n13\n14\nFizzBuzz\n16"
-      },
-      {
-        "entrada": "30",
-        "salida": "1\n2\nFizz\n4\nBuzz\nFizz\n7\n8\nFizz\nBuzz\n11\nFizz\n13\n14\nFizzBuzz\n16\n17\nFizz\n19\nBuzz\nFizz\n22\n23\nFizz\nBuzz\n26\nFizz\n28\n29\nFizzBuzz"
-      },
-      {
-        "entrada": "100",
-        "salida": "1\n2\nFizz\n4\nBuzz\nFizz\n7\n8\nFizz\nBuzz\n11\nFizz\n13\n14\nFizzBuzz\n16\n17\nFizz\n19\nBuzz\nFizz\n22\n23\nFizz\nBuzz\n26\nFizz\n28\n29\nFizzBuzz\n31\n32\nFizz\n34\nBuzz\nFizz\n37\n38\nFizz\nBuzz\n41\nFizz\n43\n44\nFizzBuzz\n46\n47\nFizz\n49\nBuzz\nFizz\n52\n53\nFizz\nBuzz\n56\nFizz\n58\n59\nFizzBuzz\n61\n62\nFizz\n64\nBuzz\nFizz\n67\n68\nFizz\nBuzz\n71\nFizz\n73\n74\nFizzBuzz\n76\n77\nFizz\n79\nBuzz\nFizz\n82\n83\nFizz\nBuzz\n86\nFizz\n88\n89\nFizzBuzz\n91\n92\nFizz\n94\nBuzz\nFizz\n97\n98\nFizz\nBuzz"
-      }
-    ]
-  },
-  {
-    "id": "P07",
-    "titulo": "Números primos hasta N",
-    "nivel": "dificil",
-    "puntos": 200,
-    "tema": "5.4 Ciclos anidados",
-    "enunciado": "Lee un número N e imprime todos los números primos entre 2 y N (incluido), separados por un espacio. Un número primo solo es divisible por 1 y por sí mismo.",
-    "formato_entrada": "Una línea con un entero N (2 ≤ N ≤ 1000).",
-    "formato_salida": "Los primos entre 2 y N en orden creciente, separados por un espacio.",
-    "limite_tiempo_ms": 2000,
-    "tiempo_minutos": 30,
-    "plantilla": {
-      "python": "n = int(input())\n# Escribe tu solución aquí\n",
-      "cpp": "#include <iostream>\n#include <string>\nusing namespace std;\n\nint main() {\n    // Lee la entrada con cin y escribe la respuesta con cout\n    int n;\n    cin >> n;\n\n    return 0;\n}\n"
-    },
-    "ejemplos": [
-      {
-        "entrada": "10",
-        "salida": "2 3 5 7"
-      }
-    ],
-    "pruebas_ocultas": [
-      {
-        "entrada": "2",
+        "entrada": "1000000\n-1000000\n1\n-1\n0",
         "salida": "2"
       },
       {
-        "entrada": "3",
-        "salida": "2 3"
+        "entrada": "0\n5\n0\n-5\n0",
+        "salida": "1"
       },
       {
-        "entrada": "30",
-        "salida": "2 3 5 7 11 13 17 19 23 29"
-      },
-      {
-        "entrada": "97",
-        "salida": "2 3 5 7 11 13 17 19 23 29 31 37 41 43 47 53 59 61 67 71 73 79 83 89 97"
-      },
-      {
-        "entrada": "100",
-        "salida": "2 3 5 7 11 13 17 19 23 29 31 37 41 43 47 53 59 61 67 71 73 79 83 89 97"
-      },
-      {
-        "entrada": "1000",
-        "salida": "2 3 5 7 11 13 17 19 23 29 31 37 41 43 47 53 59 61 67 71 73 79 83 89 97 101 103 107 109 113 127 131 137 139 149 151 157 163 167 173 179 181 191 193 197 199 211 223 227 229 233 239 241 251 257 263 269 271 277 281 283 293 307 311 313 317 331 337 347 349 353 359 367 373 379 383 389 397 401 409 419 421 431 433 439 443 449 457 461 463 467 479 487 491 499 503 509 521 523 541 547 557 563 569 571 577 587 593 599 601 607 613 617 619 631 641 643 647 653 659 661 673 677 683 691 701 709 719 727 733 739 743 751 757 761 769 773 787 797 809 811 821 823 827 829 839 853 857 859 863 877 881 883 887 907 911 919 929 937 941 947 953 967 971 977 983 991 997"
+        "entrada": "-7\n8\n-9\n10\n11",
+        "salida": "3"
       }
     ]
   },
   {
-    "id": "P08",
-    "titulo": "¿Es palíndromo?",
+    "id": "D1",
+    "titulo": "La tienda de la asociación",
     "nivel": "dificil",
-    "puntos": 200,
-    "tema": "5.2 Ciclo while",
-    "enunciado": "Lee un número entero positivo e indica si es palíndromo, es decir, si se lee igual de izquierda a derecha que de derecha a izquierda.",
-    "formato_entrada": "Una línea con un entero N (0 ≤ N ≤ 10^18), sin ceros a la izquierda.",
-    "formato_salida": "SI si el número es palíndromo, o NO si no lo es.",
+    "puntos": 30,
+    "tema": "Ronda 3 · Difícil",
+    "enunciado": "Durante el descanso, la tienda de la asociación registra cada venta digitando el código del producto:\n\n  1 = Empanada ($2.500)\n  2 = Gaseosa ($3.000)\n  3 = Galleta ($1.500)\n  4 = Dona ($2.000)\n\nEl cajero digita 0 cuando cierra la tienda. Si digita un código que no existe, el programa muestra Codigo invalido (así, sin tildes) en ese momento y esa venta no se cuenta.\n\nAl final se debe mostrar el dinero total recaudado y cuántas unidades se vendieron de cada producto.",
+    "formato_entrada": "Un código por línea. La última línea siempre es 0.",
+    "ayuda_entrada": {
+      "python": "no sabes cuántas líneas vienen: lees hasta encontrar el 0. Lee el primer código antes del ciclo (codigo = int(input())), y al final de cada vuelta lee el siguiente con otro int(input()). El ciclo es: while codigo != 0:",
+      "cpp": "no sabes cuántos códigos vienen: lee hasta encontrar el 0. Lee el primero con cin >> codigo; antes del ciclo y el siguiente al final de cada vuelta: while (codigo != 0) { ...; cin >> codigo; }"
+    },
+    "formato_salida": "Por cada código que no existe, una línea con: Codigo invalido\nLuego una línea con el dinero total recaudado (sin puntos ni signo $).\nY una última línea con las unidades vendidas de empanada, gaseosa, galleta y dona, separadas por un espacio.",
     "limite_tiempo_ms": 2000,
-    "tiempo_minutos": 30,
+    "tiempo_minutos": 7,
     "plantilla": {
-      "python": "n = int(input())\n# Escribe tu solución aquí\n",
-      "cpp": "#include <iostream>\n#include <string>\nusing namespace std;\n\nint main() {\n    // Lee la entrada con cin y escribe la respuesta con cout\n    long long n;\n    cin >> n;\n\n    return 0;\n}\n"
+      "python": "codigo = int(input())\n# Escribe tu solución aquí: repite mientras el código no sea 0\n",
+      "cpp": "#include <iostream>\nusing namespace std;\n\nint main() {\n    int codigo;\n    cin >> codigo;\n    // Escribe tu solución aquí: repite mientras el código no sea 0\n\n    return 0;\n}\n"
     },
     "ejemplos": [
       {
-        "entrada": "12321",
-        "salida": "SI"
-      },
-      {
-        "entrada": "123",
-        "salida": "NO"
+        "entrada": "1\n2\n5\n3\n1\n0",
+        "salida": "Codigo invalido\n9500\n2 1 1 0"
       }
     ],
     "pruebas_ocultas": [
       {
         "entrada": "0",
-        "salida": "SI"
+        "salida": "0\n0 0 0 0"
       },
       {
-        "entrada": "7",
-        "salida": "SI"
+        "entrada": "9\n-3\n0",
+        "salida": "Codigo invalido\nCodigo invalido\n0\n0 0 0 0"
       },
       {
-        "entrada": "10",
-        "salida": "NO"
+        "entrada": "1\n2\n3\n4\n0",
+        "salida": "9000\n1 1 1 1"
       },
       {
-        "entrada": "1221",
-        "salida": "SI"
+        "entrada": "4\n4\n4\n4\n4\n4\n0",
+        "salida": "12000\n0 0 0 6"
       },
       {
-        "entrada": "123456789987654321",
-        "salida": "SI"
+        "entrada": "2\n7\n2\n1\n8\n3\n3\n0",
+        "salida": "Codigo invalido\nCodigo invalido\n11500\n1 2 2 0"
       },
       {
-        "entrada": "1000000000000000000",
-        "salida": "NO"
+        "entrada": "1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n2\n2\n2\n3\n4\n4\n0",
+        "salida": "39500\n10 3 1 2"
+      }
+    ]
+  },
+  {
+    "id": "D2",
+    "titulo": "El mejor vendedor",
+    "nivel": "dificil",
+    "puntos": 30,
+    "tema": "Ronda 3 · Difícil",
+    "enunciado": "Una empresa tiene registradas las ventas de 5 vendedores durante 4 meses. Se quiere conocer el total vendido por cada vendedor y cuál vendedor vendió más.\n\nPiensa primero: ¿qué estructura usarías para guardar los datos? ¿Cuántos ciclos necesitas y qué recorre cada uno?\n\nSi dos o más vendedores empatan con el mayor total, gana el de menor número.",
+    "formato_entrada": "5 líneas, una por vendedor (del 1 al 5). Cada línea tiene 4 enteros separados por espacio: lo que vendió en cada mes (entre 0 y 1 000 000).",
+    "ayuda_entrada": {
+      "python": "son 5 líneas y CADA línea trae 4 números separados por espacio. Un solo input() lee la línea completa; para separarla: ventas = list(map(int, input().split())) te da una lista con los 4 números. Repítelo 5 veces, una por vendedor.",
+      "cpp": "son 5 líneas con 4 números cada una. cin >> lee un número a la vez aunque estén en la misma línea: con un ciclo de 5 (vendedores) y otro de 4 adentro (meses) haces cin >> venta; para cada uno."
+    },
+    "formato_salida": "5 líneas con el total vendido por cada vendedor, en orden.\nY una sexta línea con el número (del 1 al 5) del vendedor que más vendió.",
+    "limite_tiempo_ms": 2000,
+    "tiempo_minutos": 6,
+    "plantilla": {
+      "python": "# 5 líneas; cada una con las ventas de 4 meses separadas por espacio\n# Escribe tu solución aquí\n",
+      "cpp": "#include <iostream>\nusing namespace std;\n\nint main() {\n    // 5 vendedores x 4 meses: lee los datos con cin\n\n    return 0;\n}\n"
+    },
+    "ejemplos": [
+      {
+        "entrada": "10 20 30 40\n5 5 5 5\n50 0 0 60\n25 25 25 25\n1 2 3 4",
+        "salida": "100\n20\n110\n100\n10\n3"
+      }
+    ],
+    "pruebas_ocultas": [
+      {
+        "entrada": "0 0 0 0\n0 0 0 0\n0 0 0 0\n0 0 0 0\n0 0 0 0",
+        "salida": "0\n0\n0\n0\n0\n1"
       },
       {
-        "entrada": "1231",
-        "salida": "NO"
+        "entrada": "1 1 1 1\n2 2 2 2\n3 3 3 3\n4 4 4 4\n5 5 5 5",
+        "salida": "4\n8\n12\n16\n20\n5"
+      },
+      {
+        "entrada": "100 0 0 0\n0 100 0 0\n0 0 100 0\n0 0 0 100\n50 50 0 0",
+        "salida": "100\n100\n100\n100\n100\n1"
+      },
+      {
+        "entrada": "7 8 9 10\n40 0 0 0\n0 0 0 34\n1 1 1 1\n0 0 0 0",
+        "salida": "34\n40\n34\n4\n0\n2"
+      },
+      {
+        "entrada": "1000000 1000000 1000000 1000000\n999999 1000000 1000000 1000000\n0 0 0 0\n1 2 3 4\n1000000 1000000 1000000 999999",
+        "salida": "4000000\n3999999\n0\n10\n3999999\n1"
+      },
+      {
+        "entrada": "3 1 4 1\n5 9 2 6\n5 3 5 8\n9 7 9 3\n2 3 8 4",
+        "salida": "9\n22\n21\n28\n17\n4"
+      }
+    ]
+  },
+  {
+    "id": "R6",
+    "titulo": "Edades válidas",
+    "nivel": "dificil",
+    "puntos": 30,
+    "tema": "Reserva",
+    "enunciado": "Escribe un programa que lea edades hasta recibir -1 y cuente solo las edades válidas: las que están entre 0 y 120 (inclusive). Al final muestra cuántas edades válidas hubo.\n\nEl -1 solo indica el final: no es una edad.",
+    "formato_entrada": "Una edad (número entero) por línea. La última línea siempre es -1.",
+    "ayuda_entrada": {
+      "python": "no sabes cuántas edades vienen: lees hasta encontrar el -1. Lee la primera antes del ciclo (edad = int(input())), y al final de cada vuelta lee la siguiente con otro int(input()). El ciclo es: while edad != -1:",
+      "cpp": "no sabes cuántas edades vienen: lee hasta encontrar el -1. Lee la primera con cin >> edad; antes del ciclo y la siguiente al final de cada vuelta: while (edad != -1) { ...; cin >> edad; }"
+    },
+    "formato_salida": "Un único entero: la cantidad de edades válidas.",
+    "limite_tiempo_ms": 2000,
+    "tiempo_minutos": 6,
+    "plantilla": {
+      "python": "edad = int(input())\n# Escribe tu solución aquí: repite mientras la edad no sea -1\n",
+      "cpp": "#include <iostream>\nusing namespace std;\n\nint main() {\n    int edad;\n    cin >> edad;\n    // Escribe tu solución aquí: repite mientras la edad no sea -1\n\n    return 0;\n}\n"
+    },
+    "ejemplos": [
+      {
+        "entrada": "25\n130\n-5\n0\n120\n-1",
+        "salida": "3"
+      }
+    ],
+    "pruebas_ocultas": [
+      {
+        "entrada": "-1",
+        "salida": "0"
+      },
+      {
+        "entrada": "121\n-2\n-1",
+        "salida": "0"
+      },
+      {
+        "entrada": "0\n120\n-1",
+        "salida": "2"
+      },
+      {
+        "entrada": "5\n5\n5\n-1",
+        "salida": "3"
+      },
+      {
+        "entrada": "-100\n200\n60\n119\n121\n1\n-1",
+        "salida": "3"
+      },
+      {
+        "entrada": "18\n-1",
+        "salida": "1"
       }
     ]
   }

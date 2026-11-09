@@ -4,10 +4,17 @@
 // Reglas:
 //  - Cada ítem tiene su propio tiempo, definido en el banco (tiempo_segundos / tiempo_minutos).
 //    Si falta, se usa el tiempo por defecto de su nivel.
-//  - No se puede volver atrás ni saltar un ítem:
+//  - No se puede volver atrás:
 //      · Pregunta: al responder pasa a la siguiente. Si se acaba el tiempo, cuenta como no respondida.
 //      · Problema: pasa al siguiente cuando lo resuelve (100 %), cuando agota sus intentos o cuando se acaba su tiempo.
-//  - Pregunta correcta: puntos del banco + bonus de hasta +50 % por rapidez.
+//      · Un problema se puede SALTAR: queda pendiente con el tiempo que le quedaba. Al terminar el recorrido
+//        el estudiante ve sus retos pendientes y puede volver a ellos (o finalizar sin resolverlos).
+//  - Probar y Enviar se califican en una cola (los envíos primero). El servidor responde de inmediato y el
+//    resultado llega después; mientras tanto el estudiante ve su posición en la cola.
+//  - Pregunta correcta: puntos del banco + bonus por tiempo sobrante.
+//  - Bonus por tiempo sobrante (preguntas y problemas): segundos que le sobraban del ítem × BONUS_POR_SEGUNDO (0,1).
+//    Ej.: reto de 10 min resuelto en 5 min -> 300 s × 0,1 = +30 pts.
+//    Pregunta: solo si es correcta. Problema: solo si queda Aceptado (100 %).
 //  - Problema: puntos × (pruebas OCULTAS superadas / total de ocultas). Cuenta el mejor envío.
 //    Los errores de compilación no gastan intentos.
 //  - Al responder, el estudiante sabe al instante si acertó (la mascota Sammy lo celebra o lo lamenta),
@@ -27,7 +34,14 @@ const MAX_CODIGO = 20000 // caracteres
 const HORAS_CONSERVAR_TERMINADOS = 24
 const TIEMPO_PREGUNTA_S = { facil: 45, medio: 60, dificil: 90 }
 const TIEMPO_PROBLEMA_MIN = { facil: 15, medio: 20, dificil: 30 }
-const BONUS_MAX = 0.5
+const MIN_RESTANTE_PENDIENTE_MS = 3000 // un reto saltado con menos tiempo que esto ya no se puede retomar
+const BONUS_POR_SEGUNDO = 0.1 // puntos por cada segundo que le sobra al estudiante
+
+// Bonus por tiempo sobrante: segundos que faltaban para que se acabara el tiempo del ítem × 0,1
+function bonusTiempo(itemFin, momento) {
+  const segundosSobrantes = Math.max(0, Math.floor((itemFin - momento) / 1000))
+  return Math.round(segundosSobrantes * BONUS_POR_SEGUNDO)
+}
 
 function texto(valor, max) {
   return typeof valor === 'string' ? valor.trim().slice(0, max) : ''
@@ -57,8 +71,8 @@ function crearGestorCompetencias({ io, bancoPreguntas, bancoProblemas, adminToke
   const cfg = {
     enviosSimultaneos: 4,
     pruebasParalelas: 3,
-    esperaEnvioMs: 10000,
-    esperaPruebaMs: 3000,
+    esperaEnvioMs: 3000,  // se cuenta desde que terminó la calificación anterior
+    esperaPruebaMs: 2000,
     pausaResultadoMs: 2000, // tiempo para ver la animación del resultado antes del siguiente ítem
     ...config
   }
@@ -104,6 +118,7 @@ function crearGestorCompetencias({ io, bancoPreguntas, bancoProblemas, adminToke
       enunciado: p.enunciado,
       formato_entrada: p.formato_entrada || '',
       formato_salida: p.formato_salida || '',
+      ayuda_entrada: p.ayuda_entrada || null, // { python, cpp }: cómo leer la entrada en cada lenguaje (opcional)
       limite_tiempo_ms: p.limite_tiempo_ms || 2000,
       tiempoMin: tiempoProblemaMin(p),
       plantilla: p.plantilla || {},
@@ -116,7 +131,8 @@ function crearGestorCompetencias({ io, bancoPreguntas, bancoProblemas, adminToke
     if (!participante.problemas[problemaId]) {
       participante.problemas[problemaId] = {
         puntos: 0, pasadas: 0, total: pruebasCalificadas(problemasPorId.get(problemaId)),
-        intentosFallidos: 0, envios: 0, aceptado: false, bloqueado: false, tiempoMs: 0, ultimoVeredicto: null
+        intentosFallidos: 0, envios: 0, aceptado: false, bloqueado: false, tiempoMs: 0, ultimoVeredicto: null,
+        saltado: false, restanteMs: 0, usadoMs: 0, saltos: 0
       }
     }
     return participante.problemas[problemaId]
@@ -131,7 +147,12 @@ function crearGestorCompetencias({ io, bancoPreguntas, bancoProblemas, adminToke
   function vistaItem(comp, p) {
     const item = itemActual(p)
     if (!item) return null
-    const vista = { tipo: item.tipo, numero: p.actual + 1, inicio: p.itemInicio, fin: p.itemFin, duracionMs: p.itemFin - p.itemInicio }
+    // Un reto retomado conserva su número original en el recorrido
+    const numero = item.retomado ? p.orden.findIndex(x => x.id === item.id && !x.retomado) + 1 : p.actual + 1
+    const vista = {
+      tipo: item.tipo, numero, clave: p.actual, retomado: !!item.retomado,
+      inicio: p.itemInicio, fin: p.itemFin, duracionMs: p.itemFin - p.itemInicio
+    }
     if (item.tipo === 'pregunta') {
       vista.pregunta = preguntaPublica(preguntasPorId.get(item.id))
     } else {
@@ -146,21 +167,21 @@ function crearGestorCompetencias({ io, bancoPreguntas, bancoProblemas, adminToke
 
   // Al final: cada ítem en el orden en que le salió, con la respuesta correcta de las preguntas
   function resumenFinal(p) {
-    return p.orden.map(item => {
+    return p.orden.filter(item => !item.retomado).map(item => {
       if (item.tipo === 'pregunta') {
         const q = preguntasPorId.get(item.id)
         const r = p.respuestas[item.id] || {}
         return {
           tipo: 'pregunta', id: q.id, nivel: q.nivel, tipo_pregunta: q.tipo, enunciado: q.enunciado, opciones: q.opciones,
           respuestaCorrecta: q.respuesta_correcta, explicacion: q.explicacion || '', tema: q.tema || '',
-          respuesta: r.respuesta ?? null, esCorrecta: !!r.esCorrecta, puntos: r.puntos || 0, maxPuntos: Math.round(q.puntos * (1 + BONUS_MAX))
+          respuesta: r.respuesta ?? null, esCorrecta: !!r.esCorrecta, puntos: r.puntos || 0, maxPuntos: q.puntos + Math.round(tiempoPreguntaS(q) * BONUS_POR_SEGUNDO)
         }
       }
       const prob = problemasPorId.get(item.id)
       const e = p.problemas[item.id]
       return {
-        tipo: 'problema', id: prob.id, nivel: prob.nivel, titulo: prob.titulo, maxPuntos: prob.puntos,
-        puntos: e?.puntos || 0, aceptado: !!e?.aceptado, envios: e?.envios || 0
+        tipo: 'problema', id: prob.id, nivel: prob.nivel, titulo: prob.titulo, maxPuntos: prob.puntos + Math.round(tiempoProblemaMin(prob) * 60 * BONUS_POR_SEGUNDO),
+        puntos: e?.puntos || 0, aceptado: !!e?.aceptado, envios: e?.envios || 0, saltado: !!e?.saltado
       }
     })
   }
@@ -183,6 +204,19 @@ function crearGestorCompetencias({ io, bancoPreguntas, bancoProblemas, adminToke
       totalItems: comp.preguntaIds.length + comp.problemaIds.length,
       terminoRecorrido: !!p.terminado,
       item: comp.estado === 'en-curso' ? vistaItem(comp, p) : null,
+      // Retos que saltó y puede retomar (solo cuando terminó el resto del recorrido)
+      enPendientes: comp.estado === 'en-curso' && !!p.enPendientes,
+      pendientes: comp.estado === 'en-curso' && p.enPendientes ? pendientesDe(p).map(id => {
+        const prob = problemasPorId.get(id)
+        const e = p.problemas[id]
+        return {
+          id, titulo: prob.titulo, puntos: prob.puntos, restanteMs: e.restanteMs, misPuntos: e.puntos,
+          intentosFallidos: e.intentosFallidos, envios: e.envios,
+          numero: p.orden.findIndex(x => x.id === id && !x.retomado) + 1
+        }
+      }) : [],
+      // Código que se está calificando ahora (para mostrar la cola aunque se recargue la página)
+      evaluando: p.evaluando ? { tipo: p.evaluando.tipo, problemaId: p.evaluando.problemaId, titulo: p.evaluando.titulo, posicion: p.evaluando.posicion || 0 } : null,
       misPuntos: yo ? yo.puntos : 0,
       miTiempoTotalMs: yo ? yo.tiempoTotalMs : 0,
       // El ranking y las respuestas correctas solo se revelan al final
@@ -218,6 +252,25 @@ function crearGestorCompetencias({ io, bancoPreguntas, bancoProblemas, adminToke
     if (p.socketId) io.to(p.socketId).emit('competencia:mi-estado', vistaEstudiante(comp, p))
   }
 
+  // Resultado de un Probar o un Enviar (llega cuando termina la calificación)
+  function emitirResultado(p, datos) {
+    if (p.socketId) io.to(p.socketId).emit('competencia:resultado', datos)
+  }
+
+  // Posición en la cola mientras se califica su código (0 = ya se está ejecutando)
+  function avisarCola(p, posicion) {
+    if (p.evaluando) p.evaluando.posicion = posicion
+    if (p.socketId) io.to(p.socketId).emit('competencia:cola', { posicion })
+  }
+
+  function mensajeOcupado(p) {
+    const item = itemActual(p)
+    if (item && p.evaluando.problemaId !== item.id) {
+      return `Todavía se está calificando tu envío del reto «${p.evaluando.titulo}». Podrás ejecutar código cuando termine.`
+    }
+    return p.evaluando.tipo === 'envio' ? 'Tu envío se está calificando. Espera el resultado.' : 'Tu código se está ejecutando. Espera el resultado.'
+  }
+
   function enviarATodos(comp) {
     comp.participantes.forEach(p => enviarMiEstado(comp, p))
   }
@@ -239,7 +292,7 @@ function crearGestorCompetencias({ io, bancoPreguntas, bancoProblemas, adminToke
       competencias: [...competencias.values()].map(c => ({
         ...c,
         adminSocketId: null,
-        participantes: c.participantes.map(p => ({ ...p, socketId: null, conectado: false, evaluando: false }))
+        participantes: c.participantes.map(p => ({ ...p, socketId: null, conectado: false, evaluando: null }))
       }))
     }
   }
@@ -302,14 +355,32 @@ function crearGestorCompetencias({ io, bancoPreguntas, bancoProblemas, adminToke
     avanzar(comp, p)
   }
 
+  // Retos que saltó, que no resolvió ni bloqueó y a los que todavía les queda tiempo
+  function pendientesDe(p) {
+    return p.orden
+      .filter(x => x.tipo === 'problema' && !x.retomado)
+      .map(x => x.id)
+      .filter(id => {
+        const e = p.problemas[id]
+        return e && e.saltado && !e.aceptado && !e.bloqueado && e.restanteMs >= MIN_RESTANTE_PENDIENTE_MS
+      })
+  }
+
   function avanzar(comp, p) {
     p.actual++
     if (p.actual >= p.orden.length) {
-      p.terminado = true
-      p.terminadoEn = Date.now()
+      p.actual = p.orden.length
       p.itemInicio = null
       p.itemFin = null
+      if (comp.estado === 'en-curso' && pendientesDe(p).length > 0) {
+        p.enPendientes = true // elige si vuelve a sus retos saltados o finaliza
+      } else {
+        p.enPendientes = false
+        p.terminado = true
+        p.terminadoEn = Date.now()
+      }
     } else {
+      p.enPendientes = false
       p.itemInicio = Date.now()
       p.itemFin = p.itemInicio + tiempoItemMs(p.orden[p.actual])
     }
@@ -536,11 +607,11 @@ function crearGestorCompetencias({ io, bancoPreguntas, bancoProblemas, adminToke
         return cb({ ok: false, mensaje: 'Respuesta inválida.' })
       }
 
-      // Bonus por rapidez: decae linealmente durante el tiempo propio de la pregunta
+      // Bonus por tiempo sobrante (solo si acertó)
       const ms = ahora - p.itemInicio
       const esCorrecta = respuesta === q.respuesta_correcta
       const puntosBase = esCorrecta ? q.puntos : 0
-      const bonus = esCorrecta ? Math.round(q.puntos * BONUS_MAX * Math.max(0, 1 - ms / (p.itemFin - p.itemInicio))) : 0
+      const bonus = esCorrecta ? bonusTiempo(p.itemFin, ahora) : 0
       p.respuestas[q.id] = { respuesta, esCorrecta, puntos: puntosBase + bonus, puntosBase, bonus, ms }
 
       // Dice si acertó, pero no cuál era la correcta (eso se revela al final)
@@ -550,46 +621,62 @@ function crearGestorCompetencias({ io, bancoPreguntas, bancoProblemas, adminToke
       guardar()
     })
 
-    socket.on('estudiante:probar', async (datos, cb = () => {}) => {
+    // Probar y Enviar NO esperan a que termine la calificación: el servidor confirma que recibió el código,
+    // el estudiante ve su posición en la cola y el resultado llega después con 'competencia:resultado'
+    // (y queda en su estado, así no se pierde si se recarga la página o se cae el WiFi).
+    socket.on('estudiante:probar', (datos, cb = () => {}) => {
       const ctx = contextoEstudiante(socket)
       if (!ctx) return cb({ ok: false, mensaje: 'Tu sesión no está activa. Recarga la página.' })
       const { comp, p } = ctx
       const v = validarCodigoEnvio(comp, p, datos)
       if (v.error) return cb({ ok: false, mensaje: v.error })
+      if (p.evaluando) return cb({ ok: false, mensaje: mensajeOcupado(p) })
       const espera = cfg.esperaPruebaMs - (Date.now() - p.ultimaPruebaTs)
       if (espera > 0) return cb({ ok: false, mensaje: `Espera ${Math.ceil(espera / 1000)} s antes de volver a probar.` })
-      p.ultimaPruebaTs = Date.now()
 
       const personalizada = typeof datos?.entradaPersonalizada === 'string'
       const casos = personalizada
         ? [{ entrada: datos.entradaPersonalizada.slice(0, 5000), salida: null }]
         : v.problema.ejemplos
-      try {
-        const evaluacion = await cola.agregar(
-          () => correrCasos({ ejecutar, lenguaje: v.lenguaje, codigo: v.codigo, casos, limiteMs: v.problema.limite_tiempo_ms || 2000, paralelas: cfg.pruebasParalelas }),
-          (posicion) => io.to(socket.id).emit('competencia:cola', { tipo: 'prueba', posicion })
-        )
-        if (evaluacion.internoError) return cb({ ok: false, mensaje: 'El motor de ejecución falló: ' + evaluacion.internoError })
-        cb({
-          ok: true,
-          personalizada,
-          compilacion: evaluacion.compilacion,
-          casos: evaluacion.casos.map((c, i) => ({
-            entrada: casos[i].entrada,
-            esperada: personalizada ? null : casos[i].salida,
-            obtenida: c.salida,
-            ok: personalizada ? null : c.ok,
-            estado: c.estado,
-            error: c.error,
-            ms: c.ms
-          }))
+      p.evaluando = { tipo: personalizada ? 'personalizada' : 'prueba', problemaId: v.problemaId, titulo: v.problema.titulo, desde: Date.now(), posicion: 0 }
+      cb({ ok: true, enCola: true })
+      enviarMiEstado(comp, p)
+
+      cola.agregar(
+        () => correrCasos({ ejecutar, lenguaje: v.lenguaje, codigo: v.codigo, casos, limiteMs: v.problema.limite_tiempo_ms || 2000, paralelas: cfg.pruebasParalelas }),
+        (posicion) => avisarCola(p, posicion),
+        1 // los envíos pasan primero
+      )
+        .then((evaluacion) => {
+          if (evaluacion.internoError) {
+            return emitirResultado(p, { tipo: 'prueba', personalizada, problemaId: v.problemaId, ok: false, mensaje: 'El motor de ejecución falló: ' + evaluacion.internoError })
+          }
+          emitirResultado(p, {
+            tipo: 'prueba',
+            personalizada,
+            problemaId: v.problemaId,
+            ok: true,
+            compilacion: evaluacion.compilacion,
+            casos: evaluacion.casos.map((c, i) => ({
+              entrada: casos[i].entrada,
+              esperada: personalizada ? null : casos[i].salida,
+              obtenida: c.salida,
+              ok: personalizada ? null : c.ok,
+              estado: c.estado,
+              error: c.error,
+              ms: c.ms
+            }))
+          })
         })
-      } catch (e) {
-        cb({ ok: false, mensaje: 'Error al ejecutar: ' + e.message })
-      }
+        .catch((e) => emitirResultado(p, { tipo: 'prueba', personalizada, problemaId: v.problemaId, ok: false, mensaje: 'Error al ejecutar: ' + e.message }))
+        .finally(() => {
+          p.evaluando = null
+          p.ultimaPruebaTs = Date.now()
+          enviarMiEstado(comp, p)
+        })
     })
 
-    socket.on('estudiante:enviar', async (datos, cb = () => {}) => {
+    socket.on('estudiante:enviar', (datos, cb = () => {}) => {
       const ctx = contextoEstudiante(socket)
       if (!ctx) return cb({ ok: false, mensaje: 'Tu sesión no está activa. Recarga la página.' })
       const { comp, p } = ctx
@@ -599,71 +686,156 @@ function crearGestorCompetencias({ io, bancoPreguntas, bancoProblemas, adminToke
       const e = estadoProblema(p, v.problemaId)
       if (e.aceptado) return cb({ ok: false, mensaje: 'Ya resolviste este problema por completo.' })
       if (e.bloqueado) return cb({ ok: false, mensaje: 'Agotaste tus intentos en este problema.' })
-      if (p.evaluando) return cb({ ok: false, mensaje: 'Ya tienes un envío en evaluación. Espera el resultado.' })
-      const espera = cfg.esperaEnvioMs - (Date.now() - p.ultimoEnvioTs)
+      if (p.evaluando) return cb({ ok: false, mensaje: mensajeOcupado(p) })
+      // La espera mínima solo aplica a reenvíos del MISMO reto y se cuenta desde que TERMINÓ la calificación anterior
+      const espera = p.ultimoEnvioProblemaId === v.problemaId ? cfg.esperaEnvioMs - (Date.now() - p.ultimoEnvioTs) : 0
       if (espera > 0) return cb({ ok: false, mensaje: `Espera ${Math.ceil(espera / 1000)} s antes de volver a enviar.` })
 
-      // Un envío hecho a tiempo se califica aunque el tiempo del problema venza mientras se evalúa
+      // Un envío hecho a tiempo se califica aunque el tiempo del problema venza mientras espera en la cola
       const tsEnvio = Date.now()
       const indiceItem = p.actual
       const tiempoMs = tsEnvio - p.itemInicio
-      p.evaluando = true
-      p.ultimoEnvioTs = tsEnvio
+      const itemFin = p.itemFin
+      p.evaluando = { tipo: 'envio', problemaId: v.problemaId, titulo: v.problema.titulo, desde: tsEnvio, posicion: 0 }
+      cb({ ok: true, enCola: true })
+      enviarMiEstado(comp, p)
+      notificarAdmin(comp)
+
       const ejemplos = v.problema.ejemplos || []
       const casos = [...ejemplos, ...(v.problema.pruebas_ocultas || [])]
-      try {
-        const evaluacion = await cola.agregar(
-          () => correrCasos({ ejecutar, lenguaje: v.lenguaje, codigo: v.codigo, casos, limiteMs: v.problema.limite_tiempo_ms || 2000, paralelas: cfg.pruebasParalelas }),
-          (posicion) => { if (p.socketId) io.to(p.socketId).emit('competencia:cola', { tipo: 'envio', posicion }) }
-        )
-        const r = resumir(evaluacion, casos.length, ejemplos.length)
+      cola.agregar(
+        () => correrCasos({ ejecutar, lenguaje: v.lenguaje, codigo: v.codigo, casos, limiteMs: v.problema.limite_tiempo_ms || 2000, paralelas: cfg.pruebasParalelas }),
+        (posicion) => avisarCola(p, posicion),
+        0
+      )
+        .then((evaluacion) => {
+          const r = resumir(evaluacion, casos.length, ejemplos.length)
+          if (r.veredicto === 'INTERNO') {
+            p.ultimoEnvioTs = 0 // no fue culpa del estudiante: puede reintentar de inmediato
+            return emitirResultado(p, { tipo: 'envio', problemaId: v.problemaId, titulo: v.problema.titulo, ok: false, mensaje: 'El motor de ejecución falló y tu envío NO se contó. Intenta de nuevo. (' + r.mensaje + ')' })
+          }
 
-        if (r.veredicto === 'INTERNO') {
-          p.ultimoEnvioTs = 0 // no fue culpa del estudiante: puede reintentar de inmediato
-          return cb({ ok: false, mensaje: 'El motor de ejecución falló y tu envío NO se contó. Intenta de nuevo. (' + r.mensaje + ')' })
-        }
+          const puntosBase = r.total ? Math.round(v.problema.puntos * r.pasadas / r.total) : 0
+          // Bonus por tiempo sobrante solo si lo resolvió al 100 %. Se mide al momento de enviar
+          // (la espera en la cola de evaluación no le quita bonus).
+          const bonus = r.veredicto === 'ACEPTADO' ? bonusTiempo(itemFin, tsEnvio) : 0
+          const puntos = puntosBase + bonus
+          e.envios++
+          if (r.veredicto !== 'ACEPTADO' && r.veredicto !== 'COMPILACION') e.intentosFallidos++
+          if (puntos > e.puntos) {
+            e.puntos = puntos
+            e.pasadas = r.pasadas
+            e.tiempoMs = tiempoMs
+          }
+          if (r.veredicto === 'ACEPTADO') e.aceptado = true
+          if (!e.aceptado && comp.intentosMax > 0 && e.intentosFallidos >= comp.intentosMax) e.bloqueado = true
+          if (e.aceptado || e.bloqueado) e.saltado = false
+          e.ultimoVeredicto = r.veredicto
 
-        const puntos = r.total ? Math.round(v.problema.puntos * r.pasadas / r.total) : 0
-        e.envios++
-        if (r.veredicto !== 'ACEPTADO' && r.veredicto !== 'COMPILACION') e.intentosFallidos++
-        if (puntos > e.puntos) {
-          e.puntos = puntos
-          e.pasadas = r.pasadas
-          e.tiempoMs = tiempoMs
-        }
-        if (r.veredicto === 'ACEPTADO') e.aceptado = true
-        if (!e.aceptado && comp.intentosMax > 0 && e.intentosFallidos >= comp.intentosMax) e.bloqueado = true
-        e.ultimoVeredicto = r.veredicto
+          const envio = {
+            id: ++contadorEnvios,
+            codigoEstudiante: p.codigoEstudiante,
+            nombre: p.nombre,
+            problemaId: v.problemaId,
+            lenguaje: v.lenguaje,
+            ts: tsEnvio,
+            tiempoMs,
+            veredicto: r.veredicto,
+            pasadas: r.pasadas,
+            total: r.total,
+            puntosBase,
+            bonus,
+            puntos,
+            mensaje: (r.mensaje || '').slice(0, 1500),
+            codigo: v.codigo
+          }
+          comp.envios.push(envio)
+          console.log(`[Competencia ${comp.codigo}] ${p.nombre} · ${v.problemaId} · ${r.veredicto} ${r.pasadas}/${r.total} (${((Date.now() - tsEnvio) / 1000).toFixed(1)} s)`)
 
-        const envio = {
-          id: ++contadorEnvios,
-          codigoEstudiante: p.codigoEstudiante,
-          nombre: p.nombre,
-          problemaId: v.problemaId,
-          lenguaje: v.lenguaje,
-          ts: tsEnvio,
-          tiempoMs,
-          veredicto: r.veredicto,
-          pasadas: r.pasadas,
-          total: r.total,
-          puntos,
-          mensaje: (r.mensaje || '').slice(0, 1500),
-          codigo: v.codigo
-        }
-        comp.envios.push(envio)
-        console.log(`[Competencia ${comp.codigo}] ${p.nombre} · ${v.problemaId} · ${r.veredicto} ${r.pasadas}/${r.total}`)
+          emitirResultado(p, {
+            tipo: 'envio', problemaId: v.problemaId, titulo: v.problema.titulo, ok: true, envio: sinCodigo(envio),
+            intentosFallidos: e.intentosFallidos, bloqueado: e.bloqueado, mejorPuntaje: e.puntos
+          })
+          p.ultimoEnvioTs = Date.now()
+          p.ultimoEnvioProblemaId = v.problemaId
+          // Resuelto o sin intentos: pasa al siguiente ítem (si no avanzó ya porque se le acabó el tiempo)
+          if ((e.aceptado || e.bloqueado) && comp.estado === 'en-curso' && p.actual === indiceItem) avanzarTrasPausa(comp, p)
+        })
+        .catch((err) => {
+          p.ultimoEnvioTs = 0
+          emitirResultado(p, { tipo: 'envio', problemaId: v.problemaId, titulo: v.problema.titulo, ok: false, mensaje: 'Error al evaluar: ' + err.message + '. Tu envío NO se contó.' })
+        })
+        .finally(() => {
+          p.evaluando = null
+          enviarMiEstado(comp, p)
+          notificarAdmin(comp)
+          guardar()
+        })
+    })
 
-        cb({ ok: true, envio: sinCodigo(envio), intentosFallidos: e.intentosFallidos, bloqueado: e.bloqueado, mejorPuntaje: e.puntos })
-        // Resuelto o sin intentos: pasa al siguiente ítem (si no avanzó ya por tiempo)
-        if ((e.aceptado || e.bloqueado) && comp.estado === 'en-curso' && p.actual === indiceItem) avanzarTrasPausa(comp, p)
-        enviarMiEstado(comp, p)
-        notificarAdmin(comp)
-        guardar()
-      } catch (err) {
-        cb({ ok: false, mensaje: 'Error al evaluar: ' + err.message })
-      } finally {
-        p.evaluando = false
+    // Saltar un reto: pasa al siguiente ítem y el reto queda pendiente con el tiempo que le quedaba.
+    // Al terminar su recorrido, el estudiante puede volver a los retos pendientes.
+    socket.on('estudiante:saltar', (datos, cb = () => {}) => {
+      const ctx = contextoEstudiante(socket)
+      if (!ctx) return cb({ ok: false, mensaje: 'Tu sesión no está activa. Recarga la página.' })
+      const { comp, p } = ctx
+      const item = itemActual(p)
+      if (comp.estado !== 'en-curso' || !item || item.tipo !== 'problema' || item.id !== datos?.problemaId) {
+        return cb({ ok: false, mensaje: 'Ese reto ya no está activo.' })
       }
+      if (p.evaluando) return cb({ ok: false, mensaje: 'Espera el resultado de tu código antes de saltar el reto.' })
+      const e = estadoProblema(p, item.id)
+      if (e.aceptado || e.bloqueado) return cb({ ok: false, mensaje: 'Este reto ya terminó.' })
+      const ahora = Date.now()
+      const restanteMs = p.itemFin - ahora
+      if (restanteMs < MIN_RESTANTE_PENDIENTE_MS) return cb({ ok: false, mensaje: 'Al reto ya casi no le queda tiempo.' })
+      e.saltado = true
+      e.restanteMs = restanteMs
+      e.usadoMs = ahora - p.itemInicio
+      e.saltos = (e.saltos || 0) + 1
+      cb({ ok: true })
+      avanzar(comp, p)
+    })
+
+    // Volver a un reto pendiente (solo cuando ya terminó el resto de su recorrido)
+    socket.on('estudiante:retomar', (datos, cb = () => {}) => {
+      const ctx = contextoEstudiante(socket)
+      if (!ctx) return cb({ ok: false, mensaje: 'Tu sesión no está activa. Recarga la página.' })
+      const { comp, p } = ctx
+      if (comp.estado !== 'en-curso') return cb({ ok: false, mensaje: 'La competencia no está en curso.' })
+      if (!p.enPendientes || itemActual(p)) return cb({ ok: false, mensaje: 'Primero termina el ítem actual.' })
+      const id = texto(datos?.problemaId, 20)
+      if (!pendientesDe(p).includes(id)) return cb({ ok: false, mensaje: 'Ese reto ya no está pendiente.' })
+      const e = p.problemas[id]
+      const ahora = Date.now()
+      // Se agrega al final del recorrido; su reloj sigue donde quedó
+      p.orden.push({ tipo: 'problema', id, retomado: true })
+      p.actual = p.orden.length - 1
+      p.itemInicio = ahora - (e.usadoMs || 0)
+      p.itemFin = ahora + e.restanteMs
+      e.saltado = false
+      p.enPendientes = false
+      cb({ ok: true })
+      programarItem(comp, p)
+      enviarMiEstado(comp, p)
+      notificarAdmin(comp)
+      guardar()
+    })
+
+    // El estudiante decide no resolver sus retos pendientes y termina
+    socket.on('estudiante:finalizar', (_datos, cb = () => {}) => {
+      const ctx = contextoEstudiante(socket)
+      if (!ctx) return cb({ ok: false, mensaje: 'Tu sesión no está activa. Recarga la página.' })
+      const { comp, p } = ctx
+      if (!p.enPendientes || itemActual(p)) return cb({ ok: false, mensaje: 'Todavía tienes un ítem abierto.' })
+      p.enPendientes = false
+      p.terminado = true
+      p.terminadoEn = Date.now()
+      cb({ ok: true })
+      enviarMiEstado(comp, p)
+      notificarAdmin(comp)
+      guardar()
+      if (comp.participantes.every(x => x.terminado)) terminar(comp)
     })
 
     // Registro de cambios de pestaña (informativo para el profesor)

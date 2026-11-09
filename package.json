@@ -11,6 +11,6 @@
     "piston:up": "docker compose -f piston/docker-compose.yml up -d",
     "piston:down": "docker compose -f piston/docker-compose.yml down",
     "piston:prueba": "node piston/prueba-piston.mjs",
-    "prueba": "node server/competencia/prueba-competencia.js"
+    "prueba": "node server/competencia/prueba-competencia.js && node server/competencia/prueba-saltar.js && node server/competencia/prueba-carga.js"
   }
 }

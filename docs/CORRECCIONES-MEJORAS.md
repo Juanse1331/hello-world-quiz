@@ -5,6 +5,103 @@ Cada entrada indica la fecha, qué problema había, qué se hizo y qué archivos
 
 ---
 
+## 2026-11-08 — Correcciones tras la prueba con 20 estudiantes
+
+**Tipo:** Corrección de errores + mejoras pedidas
+
+### 1. Envíos que se quedaban "pegados" con muchos estudiantes
+
+**Qué pasaba:** con unas 20 personas programando a la vez, algunos estudiantes veían "Espera N s para enviar", esperaban, volvían a enviar y no pasaba nada; a otros la pantalla se les quedaba en "Calificando…" y no los dejaba enviar.
+
+**Causa (reproducida con una simulación de 20 estudiantes):**
+
+1. Si el estudiante enviaba cerca del final del tiempo, su envío quedaba esperando en la cola. Se acababa el tiempo, pasaba al siguiente reto y ahí el servidor respondía *"Ya tienes un envío en evaluación"* hasta que terminaba el envío viejo. Después respondía *"Espera N s"*, porque la espera entre envíos se contaba aunque fuera **otro** reto.
+2. En la pantalla, el estado "Calificando…" no se limpiaba al cambiar de ítem: el reto nuevo quedaba con los botones deshabilitados.
+3. Si la calificación tardaba más de 2 minutos (cola larga), el navegador dejaba de esperar la respuesta, pero el servidor seguía calificando y bloqueaba nuevos envíos.
+4. Los "Probar" (ilimitados) compartían la cola con los envíos, así que los envíos esperaban detrás de muchas pruebas.
+5. El límite de 2 s de cada programa se medía en tiempo de reloj. Con el PC saturado, un programa correcto podía pasarse y salía **"Tiempo excedido"**, gastando un intento.
+
+**Qué se hizo:**
+
+- **Probar y Enviar ya no esperan la calificación** ([index.js](../server/competencia/index.js)): el servidor confirma al instante, el estudiante ve su posición en la cola y el resultado llega aparte (`competencia:resultado`). Lo que se está calificando viaja en su estado, así que sobrevive a recargar la página o a que se caiga el WiFi.
+- Si el tiempo del reto se acaba mientras el envío espera, **se califica igual** y el resultado se le muestra como aviso en el ítem siguiente. Mientras tanto, la pantalla explica qué está pasando en vez de quedarse pegada.
+- **La espera entre envíos** baja a 3 s, solo aplica a reenvíos **del mismo reto** y se cuenta desde que termina la calificación anterior.
+- **Prioridad en la cola** ([cola.js](../server/competencia/cola.js)): los envíos pasan antes que los "Probar".
+- **Límite por tiempo de CPU** ([ejecutor.js](../server/competencia/ejecutor.js)): el límite del reto se aplica al tiempo de CPU, con 6 s de margen de reloj. [docker-compose.yml](../piston/docker-compose.yml) amplía los límites de Piston (**hay que ejecutar `npm run piston:up`**). Si Piston no se ha actualizado, el servidor usa los límites básicos y el panel del profesor lo avisa.
+- Pruebas nuevas: [prueba-carga.js](../server/competencia/prueba-carga.js) (20 estudiantes, motor lento, el caso del reto que vence en la cola) y `npm run prueba` las corre todas.
+
+### 2. Saltar retos y volver a ellos al final
+
+- Botón **Saltar reto** en cada reto de programación (las preguntas no se saltan). El reto queda pendiente con **el tiempo que le quedaba** y lo que ya había enviado.
+- Al terminar los demás ítems, el estudiante ve **"Te faltan N retos"**, con el tiempo restante de cada uno: **Resolver ahora** o **Terminar sin resolverlos**. Puede volver a saltar un reto retomado.
+- Al retomar, el reloj sigue donde quedó; el bonus usa el tiempo que le sobre y el tiempo ya usado cuenta para el desempate.
+- La competencia no termina sola mientras alguien esté eligiendo pendientes (el profesor puede terminarla). En el panel se ve "eligiendo pendientes", "retomado" y cuántos retos saltados tiene cada uno.
+- Prueba: [prueba-saltar.js](../server/competencia/prueba-saltar.js).
+
+### 3. Preguntas donde la respuesta larga delataba la correcta
+
+En 10 de las 23 preguntas de opción múltiple, la correcta era **la única opción larga** (traía la explicación: "…porque…", "…así que…"). Se reescribieron las opciones de F1, F2, F3, F7, F8, M7, D4, D5, D6 y R5. La correcta conserva su letra y su significado, y los distractores se alargaron con razonamientos plausibles pero equivocados. Ahora en **ninguna** pregunta la correcta es la única más larga.
+
+### 4. Comentarios de los estudiantes
+
+- **Ya no se muestra la dificultad** (ni la ronda) al estudiante, para que no se desanime antes de leer. El profesor la sigue viendo.
+- **Completar con varios espacios:** cada espacio `__(1)__` del código y su parte en las opciones tienen **el mismo número y color**; un `/` o un `·` ya no se confunde con la respuesta.
+- **Explicación de las entradas:** debajo del formato de entrada se ve la entrada del ejemplo **línea por línea** (cuántos valores trae cada una) y cómo leerla en el lenguaje elegido. Los 4 retos tienen una explicación propia (`ayuda_entrada`) para Python y C++.
+
+**Archivos:** `server/competencia/{index,cola,ejecutor,ranking,prueba-competencia,prueba-saltar,prueba-carga}.js`, `server/data/banco_preguntas.json`, `server/data/banco_problemas.json`, `piston/docker-compose.yml`, `server/.env.example`, `client/src/views/{VistaCompetencia,VistaAdmin}.vue`, `client/src/composables/useCompetencia.js`, `client/src/utils/completar.js`, `package.json`, `README.md`.
+
+---
+
+## 2026-10-30 — Banco de la Copa Hello World (Fase 2) cargado en el sistema
+
+**Tipo:** Contenido (bancos de preguntas y retos)
+
+**Qué se pidió:** cargar los ejercicios del documento *"Copa Hello World · Fase 2 · Ejercicios para el evento"* (equipo académico, evento del 9 de noviembre de 2026), porque son los que se usarán en el torneo:
+
+- Lo que sirva como pregunta, como pregunta.
+- Lo que se pueda resolver programando, como reto.
+- Algunos de completar código, en selección múltiple.
+
+**Qué se hizo:**
+
+- **[banco_preguntas.json](../server/data/banco_preguntas.json): 25 preguntas**, con el código, la dificultad, el puntaje (15 / 20 / 30) y el tiempo exactos del documento. La explicación de cada una sale de la clave de respuestas.
+  - **Ya eran de selección:** F1, F2, F3, M4, D3, D4, R3, R4 y R5 quedaron tal cual.
+  - **Abiertas convertidas a selección múltiple:** se escribieron 4 opciones con la respuesta de la clave y distractores basados en errores típicos.
+    - **¿Qué imprime?:** F6, M5, M6, D7 y las de desempate R1, R2.
+    - **Ordenar:** F4.
+    - **Relacionar:** F5, M2, M3.
+    - **Encontrar el error:** F7, F8, M7, D5, D6.
+  - **Completar código (selección múltiple):** M1. Las opciones combinan los dos espacios (por ejemplo `(1) != 0 · (2) suma + numero`).
+- **[banco_problemas.json](../server/data/banco_problemas.json): 4 retos de programación.** Son los ejercicios que el documento pedía responder en hoja y que se pueden resolver como programa:
+  - **M8 · Contar positivos** (Media, 20 pts, 4 min): lee 5 números y cuenta los mayores que 0.
+  - **D1 · La tienda de la asociación** (Difícil, 30 pts, 7 min): lee códigos hasta 0; muestra `Codigo invalido` (sin tildes, para que el teclado no sea un problema), el total recaudado y las unidades de cada producto.
+  - **D2 · El mejor vendedor** (Difícil, 30 pts, 6 min): lee la matriz 5 × 4; muestra el total de cada vendedor y el mejor. Si hay empate, gana el de menor número.
+  - **R6 · Edades válidas** (Reserva difícil, 30 pts, 6 min): lee edades hasta -1 y cuenta las que están entre 0 y 120.
+
+  Cada reto tiene 1 ejemplo y 6 pruebas ocultas con casos límite: todo cero, todo inválido, empates, valores máximos y la entrada que es solo el final. Las salidas se calcularon con soluciones de referencia.
+- **Rondas:** el campo `tema` de cada ítem dice su ronda (`Ronda 1 · Calentamiento`, `Ronda 2 · Media`, `Ronda 3 · Difícil`) o su uso (`Desempate`, `Reserva`). En el panel, el filtro "Todas las rondas" y el botón "Seleccionar las N visibles" permiten armar una competencia por ronda.
+- **Panel del profesor** ([VistaAdmin.vue](../client/src/views/VistaAdmin.vue)): se muestra el código del documento (F1, M2, D1…) en cada pregunta y reto, y se incluye en el Excel.
+- **Bancos anteriores:** se reemplazaron las 30 preguntas y los 8 retos de práctica. Siguen en el historial de git (`git show 6ce4e85:server/data/banco_preguntas.json`).
+
+**Diferencias con el documento (para revisar en la reunión):**
+
+- **Sin puntaje parcial en las preguntas:** F5 (3 pts por relación) y M1 (10 pts por espacio) ahora son de selección múltiple: la opción completa vale todo o nada.
+- **Retos en Python/C++ en vez de pseudocódigo en hoja:** M8, D1, D2 y R6 ahora se califican con pruebas ocultas; su puntaje es proporcional a las pruebas que pasen. D2 ya no evalúa por separado el planteamiento (a, b, c, d), sino que el programa funcione.
+- **Tiempos de los retos:** se dejaron los del documento (4, 7, 6 y 6 min), pensados para responder en papel. Escribir y probar código suele tomar más; si se quiere dar más tiempo, se cambia `tiempo_minutos` en el banco.
+- **Bonus por rapidez:** se mantiene (hasta +50 % en las preguntas), así que el puntaje máximo de cada pregunta es mayor que el del documento.
+
+**Cómo se verificó:**
+
+- Una solución de estudiante en Python para cada reto, que usa incluso `input("mensaje")`, pasa sus 7 pruebas (ejemplo y ocultas) con el envoltorio real del juez.
+- Todas las preguntas tienen una respuesta correcta válida, tiempo, explicación y ronda.
+- El tiempo total coincide con el documento: 54 min de preguntas de ronda + 17 min de retos = 71 min.
+- Prueba de punta a punta con el servidor real y el banco nuevo (F1, F6, D7 + reto D1):
+  - Imprimir fijo el resultado del ejemplo da 0 puntos.
+  - La solución correcta da Aceptado, 30 puntos.
+- `npm run prueba` y `npm run build` pasan.
+
+---
+
 ## 2026-10-24 — Mascota Sammy: animaciones de correcto / incorrecto y página 401
 
 **Tipo:** Mejora

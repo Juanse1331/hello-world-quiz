@@ -48,14 +48,29 @@ function filaRanking(reto, p) {
     codigoEstudiante: p.codigoEstudiante,
     conectado: p.conectado,
     salidasPestana: p.salidasPestana || 0,
-    // Progreso por su recorrido: ítem en el que va (1..total) o terminado
-    progreso: { actual: Math.min(p.actual + 1, p.orden.length), total: p.orden.length, terminado: !!p.terminado },
+    // Progreso por su recorrido: ítem en el que va (1..total), retos saltados pendientes, o terminado
+    progreso: progreso(p),
     puntos,
     tiempoTotalMs,
     resueltos,
     intentosFallidos,
     preguntas: { correctas, respondidas, total: reto.preguntaIds.length, puntos: puntosPreguntas },
     problemas
+  }
+}
+
+function progreso(p) {
+  const originales = p.orden.filter(x => !x.retomado)
+  const total = originales.length
+  const item = p.orden[p.actual]
+  const pendientes = Object.values(p.problemas || {}).filter(e => e.saltado && !e.aceptado && !e.bloqueado).length
+  return {
+    actual: item && item.retomado ? originales.findIndex(x => x.id === item.id) + 1 : Math.min(p.actual + 1, total),
+    total,
+    terminado: !!p.terminado,
+    retomando: !!(item && item.retomado),
+    enPendientes: !!p.enPendientes,
+    pendientes
   }
 }
 

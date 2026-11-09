@@ -6,6 +6,13 @@ services:
     container_name: piston_api
     restart: unless-stopped
     privileged: true                       # Piston lo necesita para crear sus sandboxes (usa cgroups v2)
+    environment:
+      # Límites máximos que Piston acepta. El servidor del quiz limita el TIEMPO DE CPU de cada programa
+      # (p. ej. 2 s) y deja un margen de tiempo de reloj: con 20+ estudiantes el PC se satura y un programa
+      # correcto puede tardar más en tiempo real. Sin esto aparecían "Tiempo excedido" falsos.
+      # Después de cambiar este archivo: npm run piston:up
+      - PISTON_RUN_TIMEOUT=15000
+      - PISTON_COMPILE_TIMEOUT=30000
     ports:
       - "127.0.0.1:2000:2000"              # ⚠️ no cambiar a "2000:2000" (quedaría expuesto a la red)
     volumes:

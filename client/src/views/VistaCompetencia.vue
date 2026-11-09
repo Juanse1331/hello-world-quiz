@@ -36,16 +36,15 @@
     <div v-else-if="comp.estado === 'esperando'" class="container-sm" style="padding-top: 40px;">
       <div class="card fade-in">
         <div class="texto-centro">
-          <div class="icono-grande"><Icon name="clock" :size="34" /></div>
           <h2>¡Ya estás dentro, {{ comp.nombre }}!</h2>
           <p class="texto-suave">Espera a que el profesor inicie la competencia. Empezará automáticamente.</p>
-          <div class="espera-puntos"><span></span><span></span><span></span></div>
         </div>
         <ul class="reglas">
           <li><Icon name="book" :size="16" /> Te saldrán <strong>{{ comp.totalPreguntas }} preguntas</strong><template v-if="comp.totalProblemas"> y <strong>{{ comp.totalProblemas }} retos de programación</strong></template>, mezclados en un orden distinto para cada estudiante.</li>
           <li><Icon name="clock" :size="16" /> Cada pregunta y cada reto tiene <strong>su propio tiempo</strong>. Cuando se acaba, pasas automáticamente al siguiente.</li>
-          <li><Icon name="arrow-right" :size="16" /> <strong>No puedes volver atrás ni saltarte un ítem.</strong> Al responder una pregunta pasas a la siguiente.</li>
-          <li><Icon name="target" :size="16" /> En las preguntas, responder rápido da hasta <strong>+50 %</strong> de puntos. Sabrás al instante si acertaste; cuál era la opción correcta se revela al final.</li>
+          <li><Icon name="arrow-right" :size="16" /> <strong>No puedes volver atrás.</strong> Al responder una pregunta pasas a la siguiente.</li>
+          <li v-if="comp.totalProblemas"><Icon name="skip-forward" :size="16" /> Si un reto se te complica, puedes <strong>saltarlo</strong>: al terminar los demás ítems podrás volver a él con el tiempo que le quedaba.</li>
+          <li><Icon name="target" :size="16" /> Bonus por tiempo: cada segundo que te sobre al acertar una pregunta o resolver un reto al 100 % suma <strong>0,1 puntos</strong> (ej.: resolver en 5 min un reto de 10 min = +30 pts). Sabrás al instante si acertaste; cuál era la opción correcta se revela al final.</li>
           <template v-if="comp.totalProblemas">
             <li><Icon name="code" :size="16" /> Retos en <strong>{{ comp.lenguajes.map(lenguajeLabel).join(' o ') }}</strong>. <strong>Probar</strong> usa los ejemplos (ilimitado); <strong>Enviar</strong> califica con pruebas ocultas.</li>
             <li><Icon name="check-circle" :size="16" /> Un reto termina cuando lo resuelves al 100 %<template v-if="comp.intentosMax > 0">, cuando gastas tus <strong>{{ comp.intentosMax }} intentos fallidos</strong></template> o cuando se acaba su tiempo.</li>
@@ -55,13 +54,41 @@
       </div>
     </div>
 
+    <!-- Terminó su recorrido pero dejó retos saltados: elige a cuál volver -->
+    <div v-else-if="comp.estado === 'en-curso' && !item && comp.enPendientes" class="container-sm" style="padding-top: 40px;">
+      <div class="card fade-in">
+        <div class="texto-centro">
+          <h2>Te faltan {{ comp.pendientes.length === 1 ? '1 reto' : comp.pendientes.length + ' retos' }}</h2>
+          <p class="texto-suave">Terminaste los demás ítems. Puedes volver a los retos que saltaste: cada uno conserva el tiempo que le quedaba y lo que ya enviaste.</p>
+        </div>
+        <div class="pendientes-lista">
+          <div v-for="pend in comp.pendientes" :key="pend.id" class="pendiente">
+            <div class="pendiente-info">
+              <strong>{{ pend.titulo }}</strong>
+              <span class="texto-suave">
+                <Icon name="clock" :size="13" /> Le quedan {{ formatoReloj(pend.restanteMs) }}
+                · {{ pend.puntos }} pts
+                <template v-if="pend.misPuntos"> · llevas {{ pend.misPuntos }}</template>
+                <template v-if="comp.intentosMax > 0"> · intentos fallidos {{ pend.intentosFallidos }}/{{ comp.intentosMax }}</template>
+              </span>
+            </div>
+            <button class="btn btn-primary btn-sm" :disabled="!!pidiendo" @click="retomar(pend.id)">
+              Resolver ahora <Icon name="arrow-right" :size="14" />
+            </button>
+          </div>
+        </div>
+        <div v-if="mensajeError" class="alert alert-error" style="margin-top: 12px;">{{ mensajeError }}</div>
+        <div class="texto-centro" style="margin-top: 16px;">
+          <button class="btn btn-secondary btn-sm" :disabled="!!pidiendo" @click="finalizar">Terminar sin resolverlos</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Terminó su recorrido, los demás siguen -->
     <div v-else-if="comp.estado === 'en-curso' && !item" class="container-sm" style="padding-top: 40px;">
       <div class="card fade-in texto-centro">
-        <div class="icono-grande"><Icon name="check-circle" :size="34" /></div>
         <h2>¡Terminaste!</h2>
         <p class="texto-suave">Llevas <strong>{{ comp.misPuntos }} puntos</strong>. Espera a que terminen los demás para ver el ranking y las respuestas correctas.</p>
-        <div class="espera-puntos"><span></span><span></span><span></span></div>
       </div>
     </div>
 
@@ -71,6 +98,7 @@
         <div class="barra-item-texto">
           <strong>{{ item.tipo === 'pregunta' ? 'Pregunta' : 'Reto de programación' }}</strong>
           <span class="texto-suave">· ítem {{ item.numero }} de {{ comp.totalItems }}</span>
+          <span v-if="item.retomado" class="badge badge-retomado">Retomado</span>
         </div>
         <div class="reloj-item" :class="{ urgente: urgente }">
           <div class="timer-bar"><div class="timer-fill" :style="{ width: porcentajeTiempo + '%' }"></div></div>
@@ -85,19 +113,19 @@
       </transition>
 
       <!-- Pregunta -->
-      <div v-if="item.tipo === 'pregunta'" :key="'q' + item.numero" class="container fade-in" style="padding-top: 16px;">
+      <div v-if="item.tipo === 'pregunta'" :key="'q' + item.clave" class="container fade-in" style="padding-top: 16px;">
         <div class="badges" style="margin-bottom: 12px;">
-          <span class="badge" :class="'badge-' + item.pregunta.nivel">{{ nivelLabel(item.pregunta.nivel) }}</span>
           <span class="badge badge-tipo">{{ tipoLabel(item.pregunta.tipo) }}</span>
-          <span class="badge badge-puntos">hasta {{ Math.round(item.pregunta.puntos * 1.5) }} pts</span>
+          <span class="badge badge-puntos">{{ item.pregunta.puntos }} pts + bonus por tiempo</span>
         </div>
         <div class="card pregunta-card">
-          <pre v-if="['IMP', 'ERR', 'COMP', 'DF'].includes(item.pregunta.tipo)" class="enunciado-codigo">{{ item.pregunta.enunciado }}</pre>
+          <pre v-if="['IMP', 'ERR', 'COMP', 'DF'].includes(item.pregunta.tipo)" class="enunciado-codigo"><template v-for="(seg, i) in segmentosEnunciado(item.pregunta.tipo, item.pregunta.enunciado)" :key="i"><span v-if="seg.espacio" class="espacio" :class="'espacio-' + colorEspacio(seg.espacio)">{{ seg.texto }}</span><template v-else>{{ seg.texto }}</template></template></pre>
           <p v-else class="enunciado-texto">{{ item.pregunta.enunciado }}</p>
         </div>
+        <p v-if="hayCompletar" class="texto-suave ayuda-completar">Cada color corresponde a un espacio del código.</p>
         <div class="opciones-grid">
           <button
-            v-for="(opcion, idx) in item.pregunta.opciones"
+            v-for="(opcion, idx) in opcionesPregunta"
             :key="idx"
             class="opcion-btn"
             :class="{ elegida: elegida === idx }"
@@ -105,29 +133,42 @@
             @click="responder(idx)"
           >
             <span class="opcion-letra">{{ 'ABCDEF'[idx] }}</span>
-            <span class="opcion-texto">{{ opcion }}</span>
+            <span v-if="opcion.partes" class="opcion-texto opcion-partes">
+              <span v-for="parte in opcion.partes" :key="parte.n" class="ficha" :class="'espacio-' + colorEspacio(parte.n)"><b>{{ parte.n }}</b>{{ parte.valor }}</span>
+            </span>
+            <span v-else class="opcion-texto">{{ opcion.texto }}</span>
           </button>
         </div>
         <div v-if="mensajeError" class="alert alert-error">{{ mensajeError }}</div>
       </div>
 
       <!-- Reto de programación -->
-      <div v-else :key="'p' + item.numero" class="reto-layout">
+      <div v-else :key="'p' + item.clave" class="reto-layout">
         <div class="reto-grid">
           <section class="card panel-enunciado">
             <div class="enunciado-cabecera">
               <h2>{{ problema.titulo }}</h2>
               <div class="badges">
-                <span class="badge" :class="'badge-' + problema.nivel">{{ nivelLabel(problema.nivel) }}</span>
-                <span class="badge badge-tipo">{{ problema.puntos }} pts</span>
+                <span class="badge badge-tipo">{{ problema.puntos }} pts + bonus por tiempo</span>
                 <span class="badge badge-tipo">{{ problema.totalPruebas }} pruebas ocultas</span>
               </div>
-              <p v-if="problema.tema" class="tema">{{ problema.tema }}</p>
             </div>
 
             <p class="enunciado">{{ problema.enunciado }}</p>
             <h4>Entrada</h4>
             <p class="enunciado">{{ problema.formato_entrada }}</p>
+            <div v-if="lineasEjemplo.length" class="lectura-entrada">
+              <div class="lectura-titulo"><Icon name="terminal" :size="15" /> Así llega la entrada del ejemplo a tu programa</div>
+              <div class="lectura-lineas">
+                <div v-for="l in lineasEjemplo.slice(0, 8)" :key="l.n" class="lectura-linea">
+                  <span class="lectura-num">Línea {{ l.n }}</span>
+                  <code class="lectura-texto">{{ l.texto || ' ' }}</code>
+                  <span class="lectura-valores">{{ l.valores === 1 ? '1 valor' : l.valores + ' valores' }}</span>
+                </div>
+                <div v-if="lineasEjemplo.length > 8" class="texto-suave lectura-mas">… y {{ lineasEjemplo.length - 8 }} líneas más</div>
+              </div>
+              <p class="lectura-ayuda"><strong>En {{ lenguajeLabel(lenguaje) }}:</strong> {{ ayudaEntrada }}</p>
+            </div>
             <h4>Salida</h4>
             <p class="enunciado">{{ problema.formato_salida }}</p>
 
@@ -170,6 +211,9 @@
               </div>
 
               <div class="editor-acciones">
+                <button class="btn btn-sm btn-saltar" :disabled="!!ocupado || restanteMs <= 0" @click="saltar" title="Pasar al siguiente ítem y volver a este reto al final">
+                  <Icon name="skip-forward" :size="14" /> Saltar reto
+                </button>
                 <span class="texto-suave ayuda-acciones">Probar no gasta intentos. Al resolverlo pasas al siguiente ítem.</span>
                 <button class="btn btn-secondary" :disabled="!!ocupado || restanteMs <= 0" @click="probar(false)">
                   <Icon name="play" :size="16" /> Probar
@@ -192,7 +236,8 @@
               <div class="consola-cuerpo">
                 <div v-if="ocupado && pestanaConsola !== 'envios'" class="ejecutando">
                   <div class="spinner spinner-sm"></div>
-                  <span v-if="estado.cola && estado.cola.posicion > 0">En cola: hay {{ estado.cola.posicion }} {{ estado.cola.posicion === 1 ? 'envío' : 'envíos' }} antes que el tuyo...</span>
+                  <span v-if="ocupado === 'otro'">Todavía se está calificando tu envío del reto «{{ comp.evaluando.titulo }}». Te avisaremos el resultado; luego podrás ejecutar código aquí.</span>
+                  <span v-else-if="posicionCola > 0">En cola: {{ posicionCola === 1 ? 'eres el siguiente' : 'hay ' + (posicionCola - 1) + ' antes que tú' }}. Muchos compañeros están ejecutando código; no cierres la página.</span>
                   <span v-else>{{ ocupado === 'enviar' ? 'Calificando con las pruebas ocultas...' : 'Ejecutando tu código...' }}</span>
                 </div>
 
@@ -208,7 +253,7 @@
                         <strong>{{ veredictoInfo(accionActiva.datos.veredicto).texto }}</strong>
                         <span v-if="accionActiva.datos.veredicto !== 'COMPILACION'"> · {{ accionActiva.datos.pasadas }} de {{ accionActiva.datos.total }} pruebas ocultas</span>
                       </div>
-                      <span class="veredicto-puntos">+{{ accionActiva.datos.puntos }} pts</span>
+                      <span class="veredicto-puntos">+{{ accionActiva.datos.puntos }} pts<small v-if="accionActiva.datos.bonus" class="veredicto-bonus">{{ accionActiva.datos.puntosBase }} + {{ accionActiva.datos.bonus }} por tiempo</small></span>
                     </div>
                     <div class="barra-pruebas">
                       <span v-for="i in accionActiva.datos.total" :key="i" :class="{ ok: i <= accionActiva.datos.pasadas }"></span>
@@ -316,23 +361,23 @@
         <div v-for="(r, idx) in comp.resumen" :key="r.tipo + r.id" class="revision" :class="r.tipo === 'pregunta' ? (r.esCorrecta ? 'rev-ok' : 'rev-mal') : (r.aceptado ? 'rev-ok' : r.puntos > 0 ? 'rev-parcial' : 'rev-mal')">
           <div class="revision-cabecera">
             <span class="revision-num">{{ idx + 1 }}</span>
-            <span class="badge" :class="'badge-' + r.nivel">{{ nivelLabel(r.nivel) }}</span>
             <span class="badge badge-tipo">{{ r.tipo === 'pregunta' ? tipoLabel(r.tipo_pregunta) : 'Reto' }}</span>
             <strong class="revision-puntos">{{ r.puntos }} / {{ r.maxPuntos }} pts</strong>
           </div>
           <template v-if="r.tipo === 'pregunta'">
-            <pre v-if="['IMP', 'ERR', 'COMP', 'DF'].includes(r.tipo_pregunta)" class="enunciado-codigo">{{ r.enunciado }}</pre>
+            <pre v-if="['IMP', 'ERR', 'COMP', 'DF'].includes(r.tipo_pregunta)" class="enunciado-codigo"><template v-for="(seg, i) in segmentosEnunciado(r.tipo_pregunta, r.enunciado)" :key="i"><span v-if="seg.espacio" class="espacio" :class="'espacio-' + colorEspacio(seg.espacio)">{{ seg.texto }}</span><template v-else>{{ seg.texto }}</template></template></pre>
             <p v-else class="revision-enunciado">{{ r.enunciado }}</p>
             <p class="revision-respuesta">
               <template v-if="r.respuesta === null"><Icon name="clock" :size="14" /> No respondiste a tiempo.</template>
-              <template v-else><Icon :name="r.esCorrecta ? 'check-circle' : 'x-circle'" :size="14" /> Tu respuesta: <strong>{{ r.opciones[r.respuesta] }}</strong></template>
-              <template v-if="!r.esCorrecta"> · Correcta: <strong>{{ r.opciones[r.respuestaCorrecta] }}</strong></template>
+              <template v-else><Icon :name="r.esCorrecta ? 'check-circle' : 'x-circle'" :size="14" /> Tu respuesta: <strong>{{ textoOpcion(r, r.respuesta) }}</strong></template>
+              <template v-if="!r.esCorrecta"> · Correcta: <strong>{{ textoOpcion(r, r.respuestaCorrecta) }}</strong></template>
             </p>
             <p v-if="r.explicacion" class="texto-suave revision-explicacion">{{ r.explicacion }}</p>
           </template>
           <p v-else class="revision-enunciado">
             <strong>{{ r.titulo }}</strong> ·
             <template v-if="r.aceptado">resuelto</template>
+            <template v-else-if="r.saltado">lo saltaste y no volviste a él<template v-if="r.envios"> ({{ r.envios }} envío(s))</template></template>
             <template v-else-if="r.envios">{{ r.envios }} envío(s), sin resolver por completo</template>
             <template v-else>sin envíos</template>
           </p>
@@ -363,7 +408,8 @@ import { useCompetencia } from '../composables/useCompetencia'
 import Icon from '../components/Icon.vue'
 import Podio from '../components/Podio.vue'
 import EditorCodigo from '../components/EditorCodigo.vue'
-import { formatoReloj, nivelLabel, lenguajeLabel, veredictoInfo, tipoLabel } from '../utils/formato'
+import { formatoReloj, lenguajeLabel, veredictoInfo, tipoLabel } from '../utils/formato'
+import { segmentosEnunciado, partesOpcion, colorEspacio } from '../utils/completar'
 
 const router = useRouter()
 const { estado, leerSesion, reingresar, salir, pedir, avisarFoco } = useCompetencia()
@@ -380,7 +426,7 @@ const accion = ref(null)             // lo último que hizo en el reto actual: {
 const resultadoPersonalizado = ref(null)
 const entradaPersonalizada = ref('')
 const pestanaConsola = ref('resultado')
-const ocupado = ref(null)            // null | 'probar' | 'personalizada' | 'enviar'
+const pidiendo = ref(null)           // mientras el servidor confirma que recibió el pedido
 const mensajeError = ref('')
 const errorInicio = ref('')
 const elegida = ref(null)            // opción que marcó en la pregunta actual
@@ -410,8 +456,20 @@ function mostrarSammy(estado, mensaje, detalle = '') {
   temporizadorSammy = setTimeout(() => { sammy.value = null }, 2500)
 }
 
+// Código que se está calificando en la cola. El estado viene del servidor, así no se pierde si se
+// recarga la página, y no queda "pegado" en otro reto si el tiempo se acabó mientras esperaba.
+const evaluando = computed(() => comp.value?.evaluando || null)
+const ocupado = computed(() => {
+  if (pidiendo.value) return pidiendo.value
+  const ev = evaluando.value
+  if (!ev) return null
+  if (!problema.value || ev.problemaId !== problema.value.id) return 'otro'
+  return ev.tipo === 'envio' ? 'enviar' : ev.tipo === 'personalizada' ? 'personalizada' : 'probar'
+})
+const posicionCola = computed(() => (evaluando.value ? (estado.cola?.posicion ?? evaluando.value.posicion ?? 0) : 0))
+
 // Al cambiar de ítem se limpia todo lo del anterior
-watch(() => item.value?.numero, (nuevo, anterior) => {
+watch(() => item.value?.clave, (nuevo, anterior) => {
   if (anterior !== undefined && nuevo !== anterior && !avanceEsperado) mostrarAviso('Se acabó el tiempo del ítem anterior. Pasaste al siguiente.', 'aviso-tiempo', 'clock')
   avanceEsperado = false
   sammy.value = null
@@ -424,6 +482,20 @@ watch(() => item.value?.numero, (nuevo, anterior) => {
 })
 
 // ---------- Pregunta ----------
+// Opciones de la pregunta actual; en las de completar, partidas por espacio (con su color)
+const opcionesPregunta = computed(() => {
+  const q = item.value?.pregunta
+  if (!q) return []
+  return q.opciones.map(texto => ({ texto, partes: partesOpcion(q.tipo, q.enunciado, texto) }))
+})
+const hayCompletar = computed(() => opcionesPregunta.value.some(o => o.partes))
+// Texto de una opción en la revisión final ("(1) x · (2) y" se muestra como "1: x · 2: y")
+function textoOpcion(r, idx) {
+  const texto = r.opciones[idx]
+  const partes = partesOpcion(r.tipo_pregunta, r.enunciado, texto)
+  return partes ? partes.map(p => `${p.n}: ${p.valor}`).join('   ·   ') : texto
+}
+
 async function responder(idx) {
   if (elegida.value !== null) return
   elegida.value = idx
@@ -431,7 +503,7 @@ async function responder(idx) {
   avanceEsperado = true
   const res = await pedir('estudiante:responder', { preguntaId: item.value.pregunta.id, respuesta: idx })
   if (res.ok) {
-    if (res.esCorrecta) mostrarSammy('correcto', `¡Correcto! +${res.puntos}`, res.bonus ? `${res.puntosBase} pts + ${res.bonus} por rapidez` : '')
+    if (res.esCorrecta) mostrarSammy('correcto', `¡Correcto! +${res.puntos}`, res.bonus ? `${res.puntosBase} pts + ${res.bonus} por tiempo sobrante` : '')
     else mostrarSammy('incorrecto', '¡Incorrecto!', 'La respuesta correcta se revela al final')
   } else {
     avanceEsperado = false
@@ -491,6 +563,30 @@ function restaurarPlantilla() {
   codigoActual.value = problema.value.plantilla?.[lenguaje.value] || ''
 }
 
+// ---------- Cómo leer la entrada ----------
+// La entrada del primer ejemplo, línea por línea, con cuántos valores trae cada una
+const lineasEjemplo = computed(() => {
+  const ej = problema.value?.ejemplos?.[0]
+  if (!ej) return []
+  return String(ej.entrada).replace(/\n$/, '').split('\n')
+    .map((texto, i) => ({ n: i + 1, texto, valores: texto.trim() ? texto.trim().split(/\s+/).length : 0 }))
+})
+const ayudaEntrada = computed(() => {
+  const p = problema.value
+  if (!p) return ''
+  const propia = p.ayuda_entrada?.[lenguaje.value]
+  if (propia) return propia
+  const varios = lineasEjemplo.value.some(l => l.valores > 1)
+  if (lenguaje.value === 'cpp') {
+    return varios
+      ? 'cin >> lee un valor a la vez, sin importar si están en la misma línea o en líneas distintas. Para una línea con 3 valores: cin >> a >> b >> c;'
+      : 'usa cin >> variable; por cada valor (por ejemplo dentro de un ciclo si son varios).'
+  }
+  return varios
+    ? 'cada input() lee UNA línea completa. Si la línea trae varios valores separados por espacio, sepáralos: a, b = map(int, input().split()) o lista = list(map(int, input().split())).'
+    : 'cada input() lee UNA línea. Como cada línea trae un solo valor, usa un int(input()) por línea (dentro de un ciclo si son varias).'
+})
+
 // ---------- Probar y enviar ----------
 // Lo último que hizo en este reto. Si recargó la página, su último envío.
 const accionActiva = computed(() => accion.value || (misEnvios.value[0] ? { tipo: 'envio', datos: misEnvios.value[0] } : null))
@@ -499,19 +595,18 @@ function estadoTexto(e) {
   return { TIEMPO: 'tiempo excedido', EJECUCION: 'error en ejecución', COMPILACION: 'error de compilación' }[e] || e
 }
 
+// Probar y Enviar solo dejan el código en la cola; el resultado llega después (ver watch de estado.resultado)
 async function probar(personalizada) {
   if (ocupado.value) return
   mensajeError.value = ''
   estado.cola = null
-  ocupado.value = personalizada ? 'personalizada' : 'probar'
+  pidiendo.value = personalizada ? 'personalizada' : 'probar'
   pestanaConsola.value = personalizada ? 'personalizada' : 'resultado'
   const datos = { problemaId: problema.value.id, lenguaje: lenguaje.value, codigo: codigoActual.value }
   if (personalizada) datos.entradaPersonalizada = entradaPersonalizada.value
   const res = await pedir('estudiante:probar', datos)
-  ocupado.value = null
-  if (!res.ok) { mensajeError.value = res.mensaje; return }
-  if (personalizada) resultadoPersonalizado.value = res
-  else accion.value = { tipo: 'prueba', datos: res }
+  pidiendo.value = null
+  if (!res.ok) mensajeError.value = res.mensaje
 }
 
 async function enviar() {
@@ -523,23 +618,73 @@ async function enviar() {
   }
   mensajeError.value = ''
   estado.cola = null
-  ocupado.value = 'enviar'
+  pidiendo.value = 'enviar'
   pestanaConsola.value = 'resultado'
   const res = await pedir('estudiante:enviar', { problemaId: problema.value.id, lenguaje: lenguaje.value, codigo: codigoActual.value })
-  ocupado.value = null
-  if (!res.ok) { mensajeError.value = res.mensaje; return }
-  accion.value = { tipo: 'envio', datos: res.envio }
-  const { veredicto, puntos, pasadas, total } = res.envio
+  pidiendo.value = null
+  if (!res.ok) mensajeError.value = res.mensaje
+}
+
+// Llega el resultado de un Probar o un Enviar
+watch(() => estado.resultado, (r) => {
+  if (!r) return
+  const actual = problema.value?.id
+  if (r.tipo === 'prueba') {
+    if (r.problemaId !== actual) return
+    if (!r.ok) { mensajeError.value = r.mensaje; return }
+    if (r.personalizada) resultadoPersonalizado.value = r
+    else accion.value = { tipo: 'prueba', datos: r }
+    return
+  }
+  // Envío de un reto que ya no está abierto (se le acabó el tiempo mientras esperaba en la cola)
+  if (r.problemaId !== actual) {
+    if (!r.ok) mostrarAviso(r.mensaje, 'aviso-tiempo', 'alert-triangle')
+    else mostrarAviso(`Tu envío del reto «${r.titulo}» quedó: ${veredictoInfo(r.envio.veredicto).texto} · +${r.envio.puntos} pts`, r.envio.veredicto === 'ACEPTADO' ? 'aviso-ok' : 'aviso-tiempo', veredictoInfo(r.envio.veredicto).icono)
+    return
+  }
+  if (!r.ok) { mensajeError.value = r.mensaje; return }
+  accion.value = { tipo: 'envio', datos: r.envio }
+  const { veredicto, puntos, puntosBase, bonus, pasadas, total } = r.envio
   if (veredicto === 'ACEPTADO') {
     avanceEsperado = true
-    mostrarSammy('correcto', `¡Reto resuelto! +${puntos}`, 'Pasas al siguiente ítem...')
-  } else if (res.bloqueado) {
+    mostrarSammy('correcto', `¡Reto resuelto! +${puntos}`, bonus ? `${puntosBase} pts + ${bonus} por tiempo sobrante · Pasas al siguiente ítem...` : 'Pasas al siguiente ítem...')
+  } else if (r.bloqueado) {
     avanceEsperado = true
-    mostrarSammy('incorrecto', 'Sin intentos', `Conservas ${res.mejorPuntaje} pts. Pasas al siguiente ítem...`)
+    mostrarSammy('incorrecto', 'Sin intentos', `Conservas ${r.mejorPuntaje} pts. Pasas al siguiente ítem...`)
   } else if (veredicto !== 'COMPILACION') {
     // Error de compilación no gasta intentos: solo se muestra en la consola, sin la mascota
     mostrarSammy('incorrecto', veredictoInfo(veredicto).texto, `${pasadas} de ${total} pruebas ocultas · revisa la consola`)
   }
+})
+
+// ---------- Saltar un reto y volver a los pendientes ----------
+async function saltar() {
+  if (ocupado.value) return
+  const aviso = `¿Saltar este reto?\n\nPasarás al siguiente ítem. Cuando termines los demás podrás volver a él con el tiempo que le queda (${formatoReloj(restanteMs.value)}). Lo que ya enviaste se conserva.`
+  if (!confirm(aviso)) return
+  mensajeError.value = ''
+  avanceEsperado = true
+  pidiendo.value = 'saltar'
+  const res = await pedir('estudiante:saltar', { problemaId: problema.value.id })
+  pidiendo.value = null
+  if (!res.ok) { avanceEsperado = false; mensajeError.value = res.mensaje }
+}
+
+async function retomar(problemaId) {
+  mensajeError.value = ''
+  pidiendo.value = 'retomar'
+  const res = await pedir('estudiante:retomar', { problemaId })
+  pidiendo.value = null
+  if (!res.ok) mensajeError.value = res.mensaje
+}
+
+async function finalizar() {
+  if (!confirm('¿Terminar sin resolver los retos pendientes? Ya no podrás volver a ellos.')) return
+  mensajeError.value = ''
+  pidiendo.value = 'finalizar'
+  const res = await pedir('estudiante:finalizar', {})
+  pidiendo.value = null
+  if (!res.ok) mensajeError.value = res.mensaje
 }
 
 // ---------- Resultados finales ----------
@@ -589,14 +734,9 @@ onBeforeUnmount(() => {
 .texto-centro { text-align: center; }
 .texto-suave { color: var(--color-text-light); }
 .icono-aviso { color: var(--color-warning); margin-bottom: 8px; }
-.icono-grande { width: 64px; height: 64px; border-radius: 50%; background: rgba(32,44,69,0.08); color: var(--color-primary); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 12px; }
+
 h2 { color: var(--color-primary); }
 code { background: rgba(0,0,0,0.06); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
-.espera-puntos { display: flex; justify-content: center; gap: 6px; margin: 16px 0 8px; }
-.espera-puntos span { width: 8px; height: 8px; border-radius: 50%; background: var(--color-primary); animation: rebote 1.2s infinite ease-in-out; }
-.espera-puntos span:nth-child(2) { animation-delay: 0.15s; }
-.espera-puntos span:nth-child(3) { animation-delay: 0.3s; }
-@keyframes rebote { 0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } }
 .reglas { list-style: none; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--color-border); display: flex; flex-direction: column; gap: 10px; font-size: 14px; }
 .reglas li { display: flex; gap: 10px; align-items: flex-start; }
 .reglas li .icon { margin-top: 3px; color: var(--color-primary); }
@@ -622,10 +762,10 @@ code { background: rgba(0,0,0,0.06); padding: 1px 5px; border-radius: 4px; font-
 .badge-puntos { background: rgba(32,44,69,0.1); color: var(--color-primary); }
 .pregunta-card { margin-bottom: 16px; }
 .enunciado-texto { font-size: 18px; line-height: 1.7; color: var(--color-text); white-space: pre-wrap; }
-.enunciado-codigo { font-family: Consolas, 'Courier New', monospace; font-size: 14px; line-height: 1.7; white-space: pre-wrap; color: var(--color-text); background: var(--color-bg); padding: 16px; border-radius: var(--radius-sm); border: none; border-left: 4px solid var(--color-primary); max-height: none; }
+.enunciado-codigo { font-family: Consolas, 'Courier New', monospace; font-size: 14px; line-height: 1.7; white-space: pre-wrap; color: var(--color-text); background: var(--color-bg); padding: 16px; border-radius: var(--radius-sm); border: 1px solid var(--color-border); max-height: none; }
 .opciones-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
-.opcion-btn { display: flex; align-items: center; gap: 12px; padding: 16px 20px; background: white; border: 2px solid var(--color-border); border-radius: var(--radius-md); cursor: pointer; text-align: left; font-size: 15px; font-family: inherit; color: var(--color-text); transition: all 0.15s ease; box-shadow: var(--shadow-sm); }
-.opcion-btn:hover:not(:disabled) { border-color: var(--color-primary); background: rgba(32,44,69,0.04); transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.opcion-btn { display: flex; align-items: center; gap: 12px; padding: 16px 20px; background: white; border: 2px solid var(--color-border); border-radius: var(--radius-md); cursor: pointer; text-align: left; font-size: 15px; font-family: inherit; color: var(--color-text); transition: border-color 0.12s ease, background-color 0.12s ease; }
+.opcion-btn:hover:not(:disabled) { border-color: var(--color-primary); background: rgba(32,44,69,0.04); }
 .opcion-btn:disabled { cursor: not-allowed; }
 .opcion-btn.elegida { border-color: var(--color-primary); background: rgba(32,44,69,0.08); }
 .opcion-letra { width: 32px; height: 32px; border-radius: 50%; background: var(--color-bg); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; color: var(--color-primary); flex-shrink: 0; }
@@ -643,9 +783,9 @@ code { background: rgba(0,0,0,0.06); padding: 1px 5px; border-radius: 4px; font-
 .enunciado-cabecera h2 { font-size: 20px; margin-bottom: 8px; }
 .tema { font-size: 13px; color: var(--color-text-light); margin-top: 6px; }
 .enunciado { white-space: pre-wrap; font-size: 15px; line-height: 1.65; margin-bottom: 8px; }
-.panel-enunciado h4 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--color-text-light); margin: 16px 0 6px; }
+.panel-enunciado h4 { font-size: 15px; font-weight: 700; color: var(--color-primary); margin: 20px 0 6px; }
 .ejemplo { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
-.ejemplo-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--color-text-light); margin-bottom: 4px; display: block; }
+.ejemplo-label { font-size: 12px; font-weight: 600; color: var(--color-text-light); margin-bottom: 4px; display: block; }
 pre { background: #F3F5F9; border: 1px solid var(--color-border); border-radius: 6px; padding: 8px 10px; font-family: Consolas, 'Cascadia Code', monospace; font-size: 13px; white-space: pre-wrap; word-break: break-word; max-height: 220px; overflow: auto; margin: 0; }
 .nota-pruebas { display: flex; gap: 10px; align-items: flex-start; margin-top: 12px; padding: 12px; background: rgba(32,44,69,0.05); border-radius: var(--radius-sm); font-size: 13px; color: var(--color-text-light); }
 .nota-pruebas .icon { margin-top: 2px; color: var(--color-primary); }
@@ -671,7 +811,8 @@ pre { background: #F3F5F9; border: 1px solid var(--color-border); border-radius:
 .spinner-sm { width: 24px; height: 24px; border-width: 3px; }
 
 .veredicto { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: var(--radius-sm); font-size: 15px; }
-.veredicto-puntos { margin-left: auto; font-weight: 800; font-size: 18px; }
+.veredicto-puntos { margin-left: auto; font-weight: 800; font-size: 18px; text-align: right; }
+.veredicto-bonus { display: block; font-size: 12px; font-weight: 600; opacity: 0.8; }
 .v-aceptado { background: var(--color-success-light); color: var(--color-success); }
 .v-parcial { background: #FFF3CD; color: #856404; }
 .v-error { background: var(--color-error-light); color: var(--color-error); }
@@ -682,8 +823,8 @@ pre { background: #F3F5F9; border: 1px solid var(--color-border); border-radius:
 .salida-error { background: #FFF5F5; border-color: #F3C7C4; color: #8A1F17; margin-top: 8px; }
 
 .caso { border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 10px; margin-bottom: 8px; }
-.caso-ok { border-left: 4px solid var(--color-success); }
-.caso-mal { border-left: 4px solid var(--color-error); }
+.caso-ok { border-color: #CFE5C2; background: #FAFDF8; }
+.caso-mal { border-color: #F3C7C4; background: #FFFAFA; }
 .caso-titulo { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 14px; margin-bottom: 8px; }
 .caso-ok .caso-titulo { color: var(--color-success); }
 .caso-mal .caso-titulo { color: var(--color-error); }
@@ -693,7 +834,7 @@ pre { background: #F3F5F9; border: 1px solid var(--color-border); border-radius:
 .entrada-personalizada { font-family: Consolas, monospace; font-size: 14px; resize: vertical; }
 
 .tabla-envios, .tabla-ranking { width: 100%; border-collapse: collapse; font-size: 14px; }
-.tabla-envios th, .tabla-ranking th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--color-text-light); padding: 8px; border-bottom: 2px solid var(--color-border); }
+.tabla-envios th, .tabla-ranking th { text-align: left; font-size: 13px; font-weight: 600; color: var(--color-text-light); padding: 8px; border-bottom: 1px solid var(--color-border); }
 .tabla-envios td, .tabla-ranking td { padding: 8px; border-bottom: 1px solid var(--color-border); }
 .chip-veredicto { padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 700; white-space: nowrap; }
 
@@ -708,10 +849,10 @@ pre { background: #F3F5F9; border: 1px solid var(--color-border); border-radius:
 .resumen-final span:not(.numero) { font-size: 13px; color: var(--color-text-light); }
 .tabla-ranking { margin-top: 16px; }
 .tabla-ranking tr.yo { background: rgba(242,24,79,0.07); font-weight: 700; }
-.revision { border: 1px solid var(--color-border); border-left-width: 4px; border-radius: var(--radius-sm); padding: 12px; margin-bottom: 10px; }
-.rev-ok { border-left-color: var(--color-success); }
-.rev-parcial { border-left-color: var(--color-warning); }
-.rev-mal { border-left-color: var(--color-error); }
+.revision { border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 10px; }
+.rev-ok { border-color: #CFE5C2; }
+.rev-parcial { border-color: #EBD9A0; }
+.rev-mal { border-color: #F3C7C4; }
 .revision-cabecera { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
 .revision-num { width: 24px; height: 24px; border-radius: 50%; background: var(--color-primary); color: white; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
 .revision-puntos { margin-left: auto; color: var(--color-primary); }
@@ -726,7 +867,46 @@ pre { background: #F3F5F9; border: 1px solid var(--color-border); border-radius:
 .sammy-tarjeta sammy-mascota { --sammy-tam: min(240px, 60vw); }
 .sammy-detalle { margin-top: 6px; color: var(--color-text-light); font-size: 14px; font-weight: 600; }
 .sammy-enter-active, .sammy-leave-active { transition: opacity 0.2s ease; }
-.sammy-enter-active .sammy-tarjeta { transition: transform 0.25s cubic-bezier(.3,.7,.4,1.3); }
+.sammy-enter-active .sammy-tarjeta { transition: transform 0.3s cubic-bezier(.16, 1, .3, 1); }
 .sammy-enter-from, .sammy-leave-to { opacity: 0; }
 .sammy-enter-from .sammy-tarjeta { transform: scale(0.85); }
+.badge-retomado { background: #EDE9FE; color: #5B21B6; margin-left: 6px; }
+
+/* Retos pendientes (saltados) */
+.pendientes-lista { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+.pendiente { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); flex-wrap: wrap; }
+.pendiente-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pendiente-info .texto-suave { font-size: 13px; display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+
+/* Botón saltar: discreto, para no invitar a usarlo sin pensar */
+.btn-saltar { background: transparent; color: var(--color-text-light); border: 1px dashed var(--color-border); }
+.btn-saltar:hover:not(:disabled) { color: #5B21B6; border-color: #7C3AED; background: #F5F3FF; }
+
+/* Cómo leer la entrada */
+.lectura-entrada { margin: 10px 0 4px; padding: 12px; border-radius: var(--radius-sm); background: #F6F8FC; border: 1px solid var(--color-border); }
+.lectura-titulo { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: var(--color-primary); margin-bottom: 8px; }
+.lectura-lineas { display: flex; flex-direction: column; gap: 4px; }
+.lectura-linea { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; align-items: center; gap: 8px; font-size: 13px; }
+.lectura-num { color: var(--color-text-light); font-weight: 600; font-size: 12px; }
+.lectura-texto { font-family: Consolas, 'Cascadia Code', monospace; background: white; border: 1px solid var(--color-border); border-radius: 4px; padding: 2px 8px; white-space: pre; overflow-x: auto; font-size: 13px; }
+.lectura-valores { font-size: 12px; color: var(--color-text-light); white-space: nowrap; }
+.lectura-mas { font-size: 12px; padding-left: 72px; }
+.lectura-ayuda { margin-top: 10px; font-size: 13px; line-height: 1.55; }
+
+/* Completar: un color por espacio, en el código y en las opciones */
+.ayuda-completar { font-size: 13px; margin: -4px 0 10px; }
+.espacio { display: inline-block; padding: 0 6px; border-radius: 4px; font-weight: 800; border: 1.5px solid currentColor; }
+.opcion-partes { display: flex; flex-wrap: wrap; gap: 6px; }
+.ficha { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 4px; border-radius: 6px; font-family: Consolas, 'Cascadia Code', monospace; font-size: 14px; border: 1.5px solid currentColor; }
+.ficha b { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; border-radius: 4px; color: white; font-family: var(--font-main); font-size: 12px; }
+.espacio-1 { color: #1D4ED8; background: #DBEAFE; }
+.espacio-2 { color: #B45309; background: #FEF3C7; }
+.espacio-3 { color: #047857; background: #D1FAE5; }
+.espacio-4 { color: #7C3AED; background: #EDE9FE; }
+.espacio-5 { color: #BE185D; background: #FCE7F3; }
+.ficha.espacio-1 b { background: #1D4ED8; }
+.ficha.espacio-2 b { background: #B45309; }
+.ficha.espacio-3 b { background: #047857; }
+.ficha.espacio-4 b { background: #7C3AED; }
+.ficha.espacio-5 b { background: #BE185D; }
 </style>

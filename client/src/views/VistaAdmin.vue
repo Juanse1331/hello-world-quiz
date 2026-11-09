@@ -46,6 +46,10 @@
           <button class="btn-link" @click="cargarMotor">Revisar</button>
         </div>
       </div>
+      <div v-if="motor && motor.ok && motor.modoBasico" class="alert alert-info">
+        <strong>Piston funciona, pero con límites de tiempo básicos.</strong> Con muchos estudiantes, programas correctos pueden salir con "Tiempo excedido".
+        Ejecuta <code>npm run piston:up</code> en la carpeta del proyecto (aplica <code>piston/docker-compose.yml</code>) y pulsa <strong>Revisar</strong>.
+      </div>
       <div v-if="motor && !motor.ok && seleccionProblemas.length" class="alert alert-error">
         <strong>Piston no está listo:</strong> {{ motor.mensaje }}.
         Abre Docker Desktop y ejecuta <code>npm run piston:up</code> en la carpeta del proyecto (ver README).
@@ -70,7 +74,7 @@
             <option v-for="t in ['SM', 'VF', 'IMP', 'ERR', 'COMP', 'DF']" :key="t" :value="t">{{ tipoLabel(t) }}</option>
           </select>
           <select v-model="filtroTema" class="form-control filtro filtro-tema">
-            <option value="todos">Todos los temas</option>
+            <option value="todos">Todas las rondas</option>
             <option v-for="t in temas" :key="t" :value="t">{{ t }}</option>
           </select>
         </div>
@@ -79,6 +83,7 @@
             <input type="checkbox" :value="q.id" v-model="seleccionPreguntas" />
             <div class="item-info">
               <div class="item-titulo">
+                <strong class="item-id">{{ q.id }}</strong>
                 <span class="badge" :class="'badge-' + q.nivel">{{ nivelLabel(q.nivel) }}</span>
                 <span class="badge badge-tipo">{{ tipoLabel(q.tipo) }}</span>
                 <span class="badge badge-tipo">{{ q.puntos }} pts</span>
@@ -106,6 +111,7 @@
             <input type="checkbox" :value="p.id" v-model="seleccionProblemas" />
             <div class="item-info">
               <div class="item-titulo">
+                <strong class="item-id">{{ p.id }}</strong>
                 <strong>{{ p.titulo }}</strong>
                 <span class="badge" :class="'badge-' + p.nivel">{{ nivelLabel(p.nivel) }}</span>
                 <span class="badge badge-tipo">{{ p.puntos }} pts</span>
@@ -232,11 +238,13 @@
                   </td>
                   <td class="td-progreso">
                     <span v-if="f.progreso.terminado" class="tag tag-ok"><Icon name="check" :size="11" /> terminó</span>
-                    <template v-else>{{ f.progreso.actual }} / {{ f.progreso.total }}</template>
+                    <span v-else-if="f.progreso.enPendientes" class="tag tag-pendiente" title="Terminó los demás ítems y está eligiendo si vuelve a sus retos saltados">eligiendo pendientes</span>
+                    <template v-else>{{ f.progreso.actual }} / {{ f.progreso.total }}<span v-if="f.progreso.retomando" class="tag tag-pendiente" style="margin-left: 4px;">retomado</span></template>
+                    <span v-if="f.progreso.pendientes" class="tag tag-pendiente" style="margin-left: 4px;" :title="f.progreso.pendientes + ' reto(s) saltado(s) sin resolver'"><Icon name="skip-forward" :size="10" /> {{ f.progreso.pendientes }}</span>
                   </td>
                   <td v-if="comp.preguntas.length" class="celda">
                     <div class="celda-puntos">{{ f.preguntas.puntos }}</div>
-                    <div class="celda-sub">✓{{ f.preguntas.correctas }} de {{ f.preguntas.total }}</div>
+                    <div class="celda-sub">{{ f.preguntas.correctas }} de {{ f.preguntas.total }} bien</div>
                   </td>
                   <td v-for="p in comp.problemas" :key="p.id" class="celda" :class="claseCelda(f.problemas[p.id])">
                     <template v-if="f.problemas[p.id] && f.problemas[p.id].envios > 0">
@@ -247,7 +255,7 @@
                       </div>
                       <div class="celda-sub">
                         <template v-if="f.problemas[p.id].puntos > 0">{{ formatoReloj(f.problemas[p.id].tiempoMs) }}</template>
-                        <template v-if="f.problemas[p.id].intentosFallidos"> · ✗{{ f.problemas[p.id].intentosFallidos }}</template>
+                        <template v-if="f.problemas[p.id].intentosFallidos"> · <Icon name="x" :size="10" />{{ f.problemas[p.id].intentosFallidos }}</template>
                       </div>
                     </template>
                     <span v-else class="celda-vacia">—</span>
@@ -263,7 +271,7 @@
           </div>
           <p class="leyenda texto-suave">
             Progreso: ítem en el que va cada estudiante (todos tienen un orden distinto).
-            <template v-if="comp.problemas.length"> Retos: puntos · minutos que tardó en lograr su mejor puntaje · ✗ intentos fallidos. Pasa el mouse sobre R1, R2… para ver el título.</template>
+            <template v-if="comp.problemas.length"> Retos: puntos · minutos que tardó en lograr su mejor puntaje · <Icon name="x" :size="11" /> intentos fallidos. Pasa el mouse sobre R1, R2… para ver el título.</template>
             <Icon name="eye-off" :size="12" /> = veces que salió de la pestaña. El desempate es por menor tiempo total.
           </p>
         </div>
@@ -343,9 +351,11 @@ function seleccionarFiltradas() {
 }
 const preguntasElegidas = computed(() => bancoPreguntas.value.filter(q => seleccionPreguntas.value.includes(q.id)))
 const problemasElegidos = computed(() => bancoProblemas.value.filter(p => seleccionProblemas.value.includes(p.id)))
-// Una pregunta correcta vale hasta +50 % por rapidez
+// Máximo posible: puntos base + bonus si respondiera/resolviera al instante (0,1 pts por segundo del tiempo del ítem)
+const BONUS_POR_SEGUNDO = 0.1
 const puntosPosibles = computed(() =>
-  preguntasElegidas.value.reduce((a, q) => a + Math.round(q.puntos * 1.5), 0) + problemasElegidos.value.reduce((a, p) => a + p.puntos, 0)
+  preguntasElegidas.value.reduce((a, q) => a + q.puntos + Math.round(q.tiempoS * BONUS_POR_SEGUNDO), 0) +
+  problemasElegidos.value.reduce((a, p) => a + p.puntos + Math.round(p.tiempoMin * 60 * BONUS_POR_SEGUNDO), 0)
 )
 const tiempoMaximoMs = computed(() =>
   preguntasElegidas.value.reduce((a, q) => a + q.tiempoS * 1000, 0) + problemasElegidos.value.reduce((a, p) => a + p.tiempoMin * 60000, 0)
@@ -514,13 +524,13 @@ async function exportarExcel() {
   ]
 
   const preguntas = [
-    encabezado(['Nombre', 'Código estudiante', 'Pregunta', 'Nivel', 'Respondió', 'Respuesta correcta', 'Resultado', 'Segundos', 'Puntos base', 'Bonus rapidez', 'Puntos']),
+    encabezado(['Nombre', 'Código estudiante', 'Pregunta', 'Nivel', 'Respondió', 'Respuesta correcta', 'Resultado', 'Segundos', 'Puntos base', 'Bonus tiempo', 'Puntos']),
     ...res.respuestas.flatMap(est => res.preguntas.map(q => {
       const r = est.respuestas[q.id]
       return [
         { value: est.nombre },
         { value: String(est.codigoEstudiante) },
-        { value: q.enunciado.slice(0, 200) },
+        { value: `${q.id}. ${q.enunciado.slice(0, 200)}` },
         { value: nivelLabel(q.nivel) },
         { value: r && r.respuesta !== null ? q.opciones[r.respuesta] : 'Sin respuesta' },
         { value: q.opciones[q.respuesta_correcta] },
@@ -534,7 +544,7 @@ async function exportarExcel() {
   ]
 
   const envios = [
-    encabezado(['Minuto en el reto', 'Nombre', 'Código estudiante', 'Reto', 'Lenguaje', 'Veredicto', 'Pruebas ocultas', 'Puntos', 'Mensaje', 'Código enviado']),
+    encabezado(['Minuto en el reto', 'Nombre', 'Código estudiante', 'Reto', 'Lenguaje', 'Veredicto', 'Pruebas ocultas', 'Puntos base', 'Bonus tiempo', 'Puntos', 'Mensaje', 'Código enviado']),
     ...res.envios.map(e => [
       { value: formatoReloj(e.tiempoMs) },
       { value: e.nombre },
@@ -543,6 +553,8 @@ async function exportarExcel() {
       { value: lenguajeLabel(e.lenguaje) },
       { value: veredictoInfo(e.veredicto).texto },
       { value: `${e.pasadas}/${e.total}` },
+      { value: e.puntosBase ?? e.puntos },
+      { value: e.bonus || 0 },
       { value: e.puntos },
       { value: (e.mensaje || '').slice(0, 1000) },
       { value: (e.codigo || '').slice(0, 30000), wrap: true }
@@ -553,7 +565,7 @@ async function exportarExcel() {
     { data: ranking, sheet: 'Ranking', columns: [{ width: 10 }, { width: 28 }, { width: 18 }, { width: 10 }, { width: 18 }, { width: 15 }, { width: 14 }, { width: 20 }, { width: 16 }, { width: 18 }, ...retos.map(() => ({ width: 22 }))] }
   ]
   if (res.preguntas.length) hojas.push({ data: preguntas, sheet: 'Preguntas', columns: [{ width: 26 }, { width: 18 }, { width: 50 }, { width: 10 }, { width: 28 }, { width: 28 }, { width: 14 }, { width: 10 }, { width: 12 }, { width: 14 }, { width: 8 }] })
-  if (res.problemas.length) hojas.push({ data: envios, sheet: 'Envíos', columns: [{ width: 16 }, { width: 26 }, { width: 18 }, { width: 28 }, { width: 10 }, { width: 22 }, { width: 14 }, { width: 8 }, { width: 40 }, { width: 70 }] })
+  if (res.problemas.length) hojas.push({ data: envios, sheet: 'Envíos', columns: [{ width: 16 }, { width: 26 }, { width: 18 }, { width: 28 }, { width: 10 }, { width: 22 }, { width: 14 }, { width: 12 }, { width: 14 }, { width: 8 }, { width: 40 }, { width: 70 }] })
 
   await writeExcelFile(hojas).toFile(`competencia-${comp.value.codigo}-${new Date().toISOString().slice(0, 10)}.xlsx`)
 }
@@ -620,6 +632,7 @@ code { background: rgba(0,0,0,0.06); padding: 1px 6px; border-radius: 4px; font-
 /* Vista previa en 2 líneas; al pasar el mouse se ve completa */
 .item-enunciado { font-size: 13px; color: var(--color-text-light); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; white-space: pre-wrap; word-break: break-word; }
 .item:hover .item-enunciado { display: block; overflow: visible; }
+.item-id { color: var(--color-primary); font-size: 13px; }
 .item-tema { font-size: 12px; color: var(--color-text-light); margin-top: 4px; font-style: italic; }
 .badge-tema { background: #F1F3F8; color: var(--color-text-light); font-weight: 500; text-transform: none; letter-spacing: 0; }
 .badge-tiempo { background: #E9EDF5; color: var(--color-primary); display: inline-flex; align-items: center; gap: 3px; }
@@ -634,7 +647,7 @@ code { background: rgba(0,0,0,0.06); padding: 1px 6px; border-radius: 4px; font-
 .checks input { accent-color: var(--color-primary); width: 16px; height: 16px; }
 .crear-footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; position: sticky; bottom: 12px; box-shadow: var(--shadow-md); }
 
-.codigo-label { font-size: 13px; color: var(--color-text-light); text-transform: uppercase; letter-spacing: 1px; }
+.codigo-label { font-size: 14px; color: var(--color-text-light); }
 .codigo-valor { font-size: 56px; font-weight: 800; color: var(--color-primary); letter-spacing: 4px; }
 .resumen-config { display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; margin: 12px 0 20px; font-size: 14px; color: var(--color-text-light); }
 .resumen-config span { display: inline-flex; align-items: center; gap: 4px; }
@@ -658,7 +671,7 @@ code { background: rgba(0,0,0,0.06); padding: 1px 6px; border-radius: 4px; font-
 .tabla-titulo { font-size: 16px; color: var(--color-primary); margin-bottom: 12px; }
 .tabla-scroll { overflow-x: auto; }
 .tabla-ranking { width: 100%; border-collapse: collapse; font-size: 14px; }
-.tabla-ranking th { background: var(--color-bg); padding: 8px 10px; text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--color-text-light); border-bottom: 2px solid var(--color-border); white-space: nowrap; }
+.tabla-ranking th { background: var(--color-bg); padding: 8px 10px; text-align: left; font-size: 13px; font-weight: 600; color: var(--color-text-light); border-bottom: 1px solid var(--color-border); white-space: nowrap; }
 .th-centro { text-align: center !important; }
 .th-centro small { display: block; font-size: 10px; font-weight: 400; }
 .tabla-ranking td { padding: 8px 10px; border-bottom: 1px solid var(--color-border); vertical-align: middle; }
@@ -671,6 +684,7 @@ code { background: rgba(0,0,0,0.06); padding: 1px 6px; border-radius: 4px; font-
 .tag-off { background: var(--color-error-light); color: var(--color-error); }
 .tag-aviso { background: #FFF3CD; color: #856404; }
 .tag-ok { background: var(--color-success-light); color: var(--color-success); font-weight: 700; }
+.tag-pendiente { background: #EDE9FE; color: #5B21B6; }
 .celda { text-align: center; min-width: 72px; border-left: 1px solid var(--color-border); }
 .celda-puntos { font-weight: 800; display: inline-flex; align-items: center; gap: 3px; }
 .celda-sub { font-size: 11px; opacity: 0.85; white-space: nowrap; }

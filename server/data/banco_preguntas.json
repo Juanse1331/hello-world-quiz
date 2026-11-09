@@ -1,287 +1,423 @@
 [
   {
-    "id": 1, "nivel": "facil", "tipo": "SM", "puntos": 15, "tiempo_segundos": 45,
-    "enunciado": "¿Cuál de los siguientes lenguajes es interpretado?",
-    "opciones": ["C", "C++", "Python", "Java"],
-    "respuesta_correcta": 2,
-    "explicacion": "Python se ejecuta línea por línea sin generar un ejecutable previo.",
-    "tema": "1.3 Tipos de lenguajes"
-  },
-  {
-    "id": 2, "nivel": "facil", "tipo": "VF", "puntos": 15, "tiempo_segundos": 45,
-    "enunciado": "Un lenguaje de bajo nivel como el ensamblador es más fácil de aprender que uno de alto nivel como Python.",
-    "opciones": ["Verdadero", "Falso"],
-    "respuesta_correcta": 1,
-    "explicacion": "Falso — los lenguajes de bajo nivel son más cercanos al hardware y mucho más difíciles de entender.",
-    "tema": "1.2 Lenguaje de programación"
-  },
-  {
-    "id": 3, "nivel": "facil", "tipo": "SM", "puntos": 15, "tiempo_segundos": 45,
-    "enunciado": "¿Cuál de las siguientes variables almacena correctamente un número con decimales?",
-    "opciones": ["entero = 3.14", "texto = 3.14", "real = 3.14", "booleano = 3.14"],
-    "respuesta_correcta": 2,
-    "explicacion": "El tipo correcto para números con decimales es float o real.",
-    "tema": "3.1 Tipos de datos primitivos"
-  },
-  {
-    "id": 4, "nivel": "facil", "tipo": "VF", "puntos": 15, "tiempo_segundos": 45,
-    "enunciado": "La expresión (5 > 3) AND (2 < 1) es verdadera.",
-    "opciones": ["Verdadero", "Falso"],
-    "respuesta_correcta": 1,
-    "explicacion": "Falso — AND requiere que AMBAS condiciones sean verdaderas. (2 < 1) es falso, por lo tanto toda la expresión es falsa.",
-    "tema": "3.5 Operadores lógicos"
-  },
-  {
-    "id": 5, "nivel": "facil", "tipo": "SM", "puntos": 15, "tiempo_segundos": 45,
-    "enunciado": "¿Qué estructura se usa cuando se quieren evaluar múltiples casos de un mismo valor de forma ordenada?",
-    "opciones": ["if simple", "while", "switch-case", "for"],
-    "respuesta_correcta": 2,
-    "explicacion": "switch-case permite evaluar múltiples valores posibles de una variable de forma limpia.",
-    "tema": "4.3 Switch-case"
-  },
-  {
-    "id": 6, "nivel": "facil", "tipo": "IMP", "puntos": 15, "tiempo_segundos": 45,
-    "enunciado": "¿Qué imprime el siguiente pseudocódigo?\n\na = 10\nb = 3\nESCRIBIR a MOD b\nESCRIBIR a DIV b",
-    "opciones": ["1 y luego 3", "3 y luego 1", "10 y luego 3", "0 y luego 3"],
-    "respuesta_correcta": 0,
-    "explicacion": "Imprime 1 (residuo de 10÷3) y luego 3 (división entera de 10÷3).",
-    "tema": "3.3 Operadores aritméticos"
-  },
-  {
-    "id": 7, "nivel": "facil", "tipo": "VF", "puntos": 15, "tiempo_segundos": 45,
-    "enunciado": "Una variable declarada dentro de un IF puede ser usada libremente fuera de ese bloque en cualquier lenguaje.",
-    "opciones": ["Verdadero", "Falso"],
-    "respuesta_correcta": 1,
-    "explicacion": "Falso — en la mayoría de lenguajes el scope limita el uso de una variable al bloque donde fue declarada.",
-    "tema": "3.2.1 Scope"
-  },
-  {
-    "id": 8, "nivel": "facil", "tipo": "SM", "puntos": 15, "tiempo_segundos": 45,
-    "enunciado": "¿Cuál de estas opciones NO es una característica del pseudocódigo?",
-    "opciones": ["Usa lenguaje natural estructurado", "Es ejecutable directamente por una computadora", "Ayuda a planear la lógica antes de codificar", "Usa palabras clave como IF, WHILE y FOR"],
-    "respuesta_correcta": 1,
-    "explicacion": "El pseudocódigo NO es ejecutable — es una herramienta de diseño, no un programa real.",
-    "tema": "2.4 Pseudocódigo"
-  },
-  {
-    "id": 9, "nivel": "facil", "tipo": "VF", "puntos": 15, "tiempo_segundos": 45,
-    "enunciado": "La programación orientada a objetos y la programación estructurada son el mismo paradigma con distinto nombre.",
-    "opciones": ["Verdadero", "Falso"],
-    "respuesta_correcta": 1,
-    "explicacion": "Falso — son paradigmas distintos. La estructurada organiza el código en funciones; la orientada a objetos lo organiza en clases y objetos.",
-    "tema": "1.6 Paradigmas de programación"
-  },
-  {
-    "id": 10, "nivel": "facil", "tipo": "COMP", "puntos": 15, "tiempo_segundos": 45,
-    "enunciado": "Completa el pseudocódigo para mostrar 'Aprobado' si nota >= 60 y 'Reprobado' en caso contrario:\n\nLEER nota\nIF nota _____ 60 THEN\n  ESCRIBIR _____\n_____\n  ESCRIBIR 'Reprobado'\nEND IF",
-    "opciones": ["IF nota >= 60 / ESCRIBIR 'Aprobado' / ELSE", "IF nota > 60 / ESCRIBIR 'Aprobado' / ELSE", "IF nota <= 60 / ESCRIBIR 'Reprobado' / ELSE", "IF nota == 60 / ESCRIBIR 'Aprobado' / THEN"],
-    "respuesta_correcta": 0,
-    "explicacion": "La condición correcta es >= 60, la palabra que falta es 'Aprobado' y la cláusula es ELSE.",
-    "tema": "4.2 If-else"
-  },
-  {
-    "id": 11, "nivel": "medio", "tipo": "IMP", "puntos": 20, "tiempo_segundos": 60,
-    "enunciado": "¿Qué imprime el siguiente pseudocódigo?\n\ni = 1\nsuma = 0\nWHILE i <= 5 DO\n  IF i MOD 2 == 0 THEN\n    suma = suma + i\n  END IF\n  i = i + 1\nEND WHILE\nESCRIBIR suma",
-    "opciones": ["6", "9", "15", "10"],
-    "respuesta_correcta": 0,
-    "explicacion": "Imprime 6 — suma solo los números pares entre 1 y 5: 2 + 4 = 6.",
-    "tema": "5.2 Ciclo while"
-  },
-  {
-    "id": 12, "nivel": "medio", "tipo": "ERR", "puntos": 20, "tiempo_segundos": 60,
-    "enunciado": "El siguiente pseudocódigo busca imprimir los números del 1 al 5. ¿Cuál es el error?\n\nFOR i = 1 TO 5 DO\n  ESCRIBIR i\n  i = i + 1\nEND FOR",
-    "opciones": ["No hay error, funciona bien", "Modificar 'i' dentro del FOR hace que salte de 2 en 2", "El FOR debería ir de 0 a 4", "Falta un BREAK al final"],
-    "respuesta_correcta": 1,
-    "explicacion": "Error: modificar 'i' dentro del FOR hace que salte de 2 en 2. La variable de control no debe modificarse manualmente dentro del ciclo.",
-    "tema": "5.3 Ciclo for"
-  },
-  {
-    "id": 13, "nivel": "medio", "tipo": "SM", "puntos": 20, "tiempo_segundos": 60,
-    "enunciado": "¿Qué hace la instrucción BREAK dentro de un ciclo?",
-    "opciones": ["Salta a la siguiente iteración", "Termina el programa completo", "Sale del ciclo inmediatamente", "Reinicia el ciclo desde el principio"],
-    "respuesta_correcta": 2,
-    "explicacion": "BREAK termina el ciclo actual de inmediato y continúa con el código que sigue después.",
-    "tema": "5.5 Break y continue"
-  },
-  {
-    "id": 14, "nivel": "medio", "tipo": "VF", "puntos": 20, "tiempo_segundos": 60,
-    "enunciado": "En dos ciclos FOR anidados donde el externo va de 1 a 3 y el interno de 1 a 4, el cuerpo interior se ejecuta 12 veces en total.",
-    "opciones": ["Verdadero", "Falso"],
-    "respuesta_correcta": 0,
-    "explicacion": "Verdadero — 3 iteraciones externas × 4 iteraciones internas = 12 ejecuciones del cuerpo interior.",
-    "tema": "5.4 Ciclos anidados"
-  },
-  {
-    "id": 15, "nivel": "medio", "tipo": "COMP", "puntos": 20, "tiempo_segundos": 60,
-    "enunciado": "Completa el pseudocódigo para sumar números ingresados por el usuario hasta que ingrese 0:\n\nsuma = 0\nLEER numero\nWHILE numero _____ DO\n  suma = _____\n  LEER numero\nEND WHILE\nESCRIBIR suma",
-    "opciones": ["!= 0 / suma = suma + numero", "== 0 / suma = suma + numero", "> 0 / suma = suma * numero", "!= 0 / suma = numero"],
-    "respuesta_correcta": 0,
-    "explicacion": "La condición es != 0 para continuar mientras no sea cero, y suma = suma + numero para acumular.",
-    "tema": "5.2 While con centinela"
-  },
-  {
-    "id": 16, "nivel": "medio", "tipo": "IMP", "puntos": 20, "tiempo_segundos": 60,
-    "enunciado": "¿Qué imprime el siguiente pseudocódigo si x = 4 e y = 7?\n\nIF x > 3 THEN\n  IF y > 10 THEN\n    ESCRIBIR 'A'\n  ELSE\n    ESCRIBIR 'B'\n  END IF\nELSE\n  ESCRIBIR 'C'\nEND IF",
-    "opciones": ["A", "B", "C", "No imprime nada"],
-    "respuesta_correcta": 1,
-    "explicacion": "Imprime 'B' — x > 3 es verdadero (entra al IF externo), pero y > 10 es falso (entra al ELSE interno).",
-    "tema": "4.4 Condicionales anidados"
-  },
-  {
-    "id": 17, "nivel": "medio", "tipo": "ERR", "puntos": 20, "tiempo_segundos": 60,
-    "enunciado": "El pseudocódigo busca pedir un número hasta que sea positivo. ¿Cuál es el error?\n\nDO\n  LEER n\nWHILE n > 0",
-    "opciones": ["No hay error", "La condición debería ser WHILE n <= 0 para repetir mientras no sea positivo", "Falta un BREAK", "El DO-WHILE no existe en pseudocódigo"],
-    "respuesta_correcta": 1,
-    "explicacion": "Error lógico: la condición debería ser WHILE n <= 0 para repetir mientras el número NO sea positivo. Tal como está, hace lo contrario.",
-    "tema": "5.2 Do-while"
-  },
-  {
-    "id": 18, "nivel": "medio", "tipo": "DF", "puntos": 20, "tiempo_segundos": 60,
-    "enunciado": "¿Cuál es el orden correcto de los bloques en un diagrama de flujo que calcula la suma de los primeros N números naturales?",
+    "id": "F1",
+    "nivel": "facil",
+    "tipo": "SM",
+    "puntos": 15,
+    "tiempo_segundos": 90,
+    "enunciado": "¿Cuál es una característica de un algoritmo?",
     "opciones": [
-      "Inicio → READ N → suma=0, i=1 → rombo i<=N → suma=suma+i, i=i+1 (vuelve al rombo) → WRITE suma → Fin",
-      "Inicio → suma=0, i=1 → WRITE suma → rombo i<=N → READ N → Fin",
-      "Inicio → READ N → rombo i<=N → suma=0 → WRITE suma → Fin",
-      "Inicio → READ N → WRITE suma → suma=suma+i → rombo i<=N → Fin"
+      "Debe escribirse en un lenguaje de programación concreto, como Python o C++",
+      "Es una secuencia finita y ordenada de pasos que resuelve un problema",
+      "Solo lo puede ejecutar una computadora, nunca una persona a mano",
+      "No recibe datos de entrada: siempre produce el mismo resultado"
     ],
-    "respuesta_correcta": 0,
-    "explicacion": "El flujo correcto es: leer N, inicializar acumuladores, entrar al ciclo con condición, acumular y avanzar contador, luego mostrar resultado.",
-    "tema": "5.3 For + acumulador"
-  },
-  {
-    "id": 19, "nivel": "medio", "tipo": "SM", "puntos": 20, "tiempo_segundos": 60,
-    "enunciado": "¿Cuál es el resultado de: (TRUE OR FALSE) AND (FALSE OR FALSE)?",
-    "opciones": ["TRUE", "FALSE", "ERROR", "Depende del lenguaje"],
     "respuesta_correcta": 1,
-    "explicacion": "FALSE — (TRUE OR FALSE) = TRUE, luego TRUE AND (FALSE OR FALSE) = TRUE AND FALSE = FALSE.",
-    "tema": "3.5 Operadores lógicos"
+    "explicacion": "Un algoritmo es una secuencia finita y ordenada de pasos; puede expresarse en pseudocódigo, diagrama o lenguaje natural.",
+    "tema": "Ronda 1 · Calentamiento"
   },
   {
-    "id": 20, "nivel": "medio", "tipo": "COMP", "puntos": 20, "tiempo_segundos": 60,
-    "enunciado": "Completa el switch para imprimir el tipo de triángulo según lados iguales:\n\nLEER lados_iguales\nSWITCH lados_iguales\n  CASE _____: ESCRIBIR 'Escaleno'\n  CASE 2: ESCRIBIR _____\n  CASE 3: ESCRIBIR 'Equilátero'\n  DEFAULT: ESCRIBIR _____\nEND SWITCH",
-    "opciones": ["CASE 0 / 'Isósceles' / 'Valor no válido'", "CASE 1 / 'Isósceles' / 'Error'", "CASE 0 / 'Equilátero' / 'Valor no válido'", "CASE 0 / 'Isósceles' / 'Fin'"],
-    "respuesta_correcta": 0,
-    "explicacion": "CASE 0 para Escaleno (0 lados iguales), 'Isósceles' para CASE 2, y 'Valor no válido' para el DEFAULT.",
-    "tema": "4.3 Switch-case"
-  },
-  {
-    "id": 21, "nivel": "dificil", "tipo": "IMP", "puntos": 30, "tiempo_segundos": 90,
-    "enunciado": "¿Qué imprime el siguiente pseudocódigo?\n\nFOR i = 1 TO 3 DO\n  FOR j = i TO 3 DO\n    ESCRIBIR i + ',' + j + ' '\n  END FOR\n  ESCRIBIR salto_de_línea\nEND FOR",
+    "id": "F2",
+    "nivel": "facil",
+    "tipo": "SM",
+    "puntos": 15,
+    "tiempo_segundos": 90,
+    "enunciado": "Un cine cobra $6.000 a los menores de 12 años y $10.000 a los demás. Se quiere un programa que calcule el valor de la entrada según la edad. ¿Qué usarías?",
     "opciones": [
-      "1,1 1,2 1,3 / 2,2 2,3 / 3,3",
-      "1,1 1,2 1,3 / 2,1 2,2 2,3 / 3,1 3,2 3,3",
-      "1,1 / 2,2 / 3,3",
-      "1,3 2,3 3,3"
+      "Un ciclo que repita el cálculo del precio 12 veces seguidas",
+      "Un condicional (if - else) que compare la edad con 12",
+      "Un arreglo de 12 posiciones con el precio para cada edad",
+      "Una constante EDAD = 12 que sume los dos precios del cine"
     ],
-    "respuesta_correcta": 0,
-    "explicacion": "El ciclo interno empieza en j=i, no en 1, por lo que cada fila tiene menos elementos: fila 1 tiene 3, fila 2 tiene 2, fila 3 tiene 1.",
-    "tema": "5.4 Ciclos anidados"
+    "respuesta_correcta": 1,
+    "explicacion": "Hay una sola decisión con dos caminos según la edad: un if-else.",
+    "tema": "Ronda 1 · Calentamiento"
   },
   {
-    "id": 22, "nivel": "dificil", "tipo": "ERR", "puntos": 30, "tiempo_segundos": 90,
-    "enunciado": "El pseudocódigo busca encontrar el PRIMER número divisible por 7 entre 1 y 100. ¿Cuál es el error?\n\ni = 1\nWHILE TRUE DO\n  IF i MOD 7 == 0 THEN\n    ESCRIBIR i\n  END IF\n  i = i + 1\nEND WHILE",
+    "id": "F3",
+    "nivel": "facil",
+    "tipo": "SM",
+    "puntos": 15,
+    "tiempo_segundos": 90,
+    "enunciado": "Se quiere mostrar en pantalla la tabla de multiplicar del 7 (de 7 × 1 hasta 7 × 10). ¿Qué usarías?",
     "opciones": [
-      "No hay error",
-      "El ciclo debería ser FOR en lugar de WHILE",
-      "Nunca usa BREAK al encontrar el primero, por lo que imprime TODOS los múltiplos en ciclo infinito",
-      "La condición MOD 7 está mal escrita"
+      "Un condicional (if) que compare el 7 con el 10 en cada paso",
+      "Un switch-case que elija entre multiplicar por 7 o por 10",
+      "Un ciclo (for o while) que multiplique 7 por 1, 2, … 10",
+      "Una constante con el valor de 7 × 10 calculado una sola vez"
     ],
     "respuesta_correcta": 2,
-    "explicacion": "Error: nunca usa BREAK al encontrar el primer divisible, por lo que sigue imprimiendo todos los múltiplos de 7 en un ciclo infinito. Debe agregar BREAK después del WRITE.",
-    "tema": "5.6 Ciclos infinitos + break"
+    "explicacion": "La misma operación se repite un número conocido de veces: un ciclo.",
+    "tema": "Ronda 1 · Calentamiento"
   },
   {
-    "id": 23, "nivel": "dificil", "tipo": "DF", "puntos": 30, "tiempo_segundos": 90,
-    "enunciado": "¿Cuál describe correctamente el diagrama de flujo de un algoritmo que imprime una pirámide de N filas, donde las filas pares usan '#' y las impares usan '*'?",
+    "id": "F4",
+    "nivel": "facil",
+    "tipo": "SM",
+    "puntos": 15,
+    "tiempo_segundos": 120,
+    "enunciado": "Estos son los pasos de un programa que calcula el total de una compra con IVA del 19 %:\n\nA) Mostrar el total\nB) Calcular total = subtotal + iva\nC) Calcular iva = subtotal × 0.19\nD) Leer el subtotal\n\n¿Cuál es el orden correcto de ejecución?",
     "opciones": [
-      "Inicio → READ N → FOR i=1 TO N → rombo i MOD 2==0 → sí: ciclo interno WRITE '#' / no: ciclo interno WRITE '*' → salto de línea → Fin",
-      "Inicio → READ N → WHILE i<=N → WRITE '*' → WRITE '#' → Fin",
-      "Inicio → FOR i=1 TO N → WRITE '*' → rombo i MOD 2==0 → Fin",
-      "Inicio → READ N → rombo N>0 → FOR j=1 TO i → WRITE '?' → Fin"
+      "D → B → C → A",
+      "C → D → B → A",
+      "D → C → B → A",
+      "D → C → A → B"
     ],
-    "respuesta_correcta": 0,
-    "explicacion": "El diagrama debe mostrar: READ N, FOR externo de 1 a N, rombo para verificar paridad, ciclo interno para imprimir el carácter correcto, salto de línea por fila.",
-    "tema": "5.4 + 4.4 Ciclos anidados y condicional"
+    "respuesta_correcta": 2,
+    "explicacion": "Entrada → proceso (primero el IVA, luego el total) → salida: D → C → B → A.",
+    "tema": "Ronda 1 · Calentamiento"
   },
   {
-    "id": 24, "nivel": "dificil", "tipo": "COMP", "puntos": 30, "tiempo_segundos": 90,
-    "enunciado": "Completa el pseudocódigo para un juego de adivinanza: número secreto = 42, máximo 3 intentos:\n\nsecreto = 42\nintentos = 0\nWHILE _____ DO\n  LEER intento\n  intentos = intentos + 1\n  IF intento == secreto THEN\n    ESCRIBIR 'Ganaste en ' + intentos + ' intentos'\n    _____\n  ELSE IF intento < secreto THEN\n    ESCRIBIR 'Más alto'\n  ELSE\n    ESCRIBIR _____\n  END IF\nEND WHILE",
+    "id": "F5",
+    "nivel": "facil",
+    "tipo": "SM",
+    "puntos": 15,
+    "tiempo_segundos": 120,
+    "enunciado": "La universidad quiere registrar estos datos de cada estudiante. Relaciona cada dato con el tipo de dato más adecuado.\n\n1. ¿Tiene la matrícula activa?\n2. Nombre completo\n3. Promedio acumulado (ej. 3.85)\n4. Jornada: 'D' (diurna) o 'N' (nocturna)\n5. Número de semestres cursados\n\nA) Entero   B) Real / decimal   C) Cadena de texto   D) Booleano   E) Carácter",
     "opciones": [
-      "intentos < 3 / BREAK / 'Más bajo'",
-      "intentos <= 3 / CONTINUE / 'Más alto'",
-      "intentos < 3 / RETURN / 'Fin'",
-      "intentos != 0 / BREAK / 'Más bajo'"
-    ],
-    "respuesta_correcta": 0,
-    "explicacion": "La condición es intentos < 3, se usa BREAK para salir al acertar, y 'Más bajo' cuando el intento es mayor que el secreto.",
-    "tema": "5.5 Break + while"
-  },
-  {
-    "id": 25, "nivel": "dificil", "tipo": "SM", "puntos": 30, "tiempo_segundos": 90,
-    "enunciado": "¿Qué problema tiene declarar la variable 'suma' dentro del ciclo en lugar de antes?",
-    "opciones": [
-      "Ninguno, funciona igual",
-      "Se reinicia a 0 en cada iteración y nunca acumula",
-      "El programa no compila",
-      "Solo afecta al último valor"
+      "1-E, 2-C, 3-B, 4-D, 5-A",
+      "1-D, 2-C, 3-B, 4-E, 5-A",
+      "1-D, 2-E, 3-B, 4-C, 5-A",
+      "1-D, 2-C, 3-A, 4-E, 5-B"
     ],
     "respuesta_correcta": 1,
-    "explicacion": "Si 'suma' se declara dentro del ciclo, se reinicia en cada vuelta y nunca acumula el resultado correcto.",
-    "tema": "3.2.1 Scope + ciclos"
+    "explicacion": "Matrícula activa: sí/no (booleano). Nombre: texto. Promedio: decimal. Jornada: un solo carácter. Semestres: entero.",
+    "tema": "Ronda 1 · Calentamiento"
   },
   {
-    "id": 26, "nivel": "dificil", "tipo": "VF", "puntos": 30, "tiempo_segundos": 90,
+    "id": "F6",
+    "nivel": "facil",
+    "tipo": "IMP",
+    "puntos": 15,
+    "tiempo_segundos": 120,
+    "enunciado": "¿Qué imprime el siguiente pseudocódigo?\n\na = 10\nb = 3\nWRITE a MOD b\nWRITE a DIV b",
+    "opciones": [
+      "3 y luego 1",
+      "1 y luego 3.33",
+      "0.33 y luego 3",
+      "1 y luego 3"
+    ],
+    "respuesta_correcta": 3,
+    "explicacion": "MOD es el residuo de 10 ÷ 3 (1); DIV es la división entera (3).",
+    "tema": "Ronda 1 · Calentamiento"
+  },
+  {
+    "id": "F7",
+    "nivel": "facil",
+    "tipo": "ERR",
+    "puntos": 15,
+    "tiempo_segundos": 120,
+    "enunciado": "El algoritmo debe mostrar \"Adulto\" cuando la edad sea 18 o más. ¿Cuál es el error?\n\nREAD edad\nIF edad == 18 THEN\n  WRITE \"Adulto\"\nEND IF",
+    "opciones": [
+      "Solo acepta exactamente 18; debe ser edad >= 18",
+      "Debe ser edad > 18 para que los mayores de 18 entren",
+      "Falta un ELSE que muestre \"Menor\" cuando no se cumpla",
+      "La edad debe leerse después del IF y no antes de él"
+    ],
+    "respuesta_correcta": 0,
+    "explicacion": "Con == solo entra si la edad es exactamente 18. Debe ser edad >= 18 (con > 18 quedaría por fuera quien tiene 18).",
+    "tema": "Ronda 1 · Calentamiento"
+  },
+  {
+    "id": "F8",
+    "nivel": "facil",
+    "tipo": "ERR",
+    "puntos": 15,
+    "tiempo_segundos": 150,
+    "enunciado": "El algoritmo debe sumar tres números ingresados. ¿Cuál es el error?\n\nREAD numero\nsuma = 0\nsuma = suma + numero\nREAD numero\nsuma = 0\nsuma = suma + numero\nREAD numero\nsuma = 0\nsuma = suma + numero\nWRITE suma",
+    "opciones": [
+      "Cada línea debe ser suma = suma + 1 en vez de sumar numero",
+      "WRITE suma debe ir antes del último READ numero del algoritmo",
+      "Falta leer un cuarto número para que la suma quede completa",
+      "suma = 0 está antes de cada suma; debe ir solo al inicio"
+    ],
+    "respuesta_correcta": 3,
+    "explicacion": "El acumulador se reinicia a 0 antes de cada suma, así que al final solo queda el último número. suma = 0 debe ir una sola vez, al inicio.",
+    "tema": "Ronda 1 · Calentamiento"
+  },
+  {
+    "id": "M1",
+    "nivel": "medio",
+    "tipo": "COMP",
+    "puntos": 20,
+    "tiempo_segundos": 150,
+    "enunciado": "Completa el pseudocódigo para sumar números ingresados por el usuario hasta que ingrese 0.\n\nsuma = 0\nREAD numero\nWHILE numero __(1)__ DO\n  suma = __(2)__\n  READ numero\nEND WHILE\nWRITE suma\n\n¿Con qué se completan los espacios (1) y (2)?",
+    "opciones": [
+      "(1) == 0   ·   (2) suma + numero",
+      "(1) != 0   ·   (2) suma + 1",
+      "(1) != 0   ·   (2) suma + numero",
+      "(1) > 0   ·   (2) suma + numero"
+    ],
+    "respuesta_correcta": 2,
+    "explicacion": "El ciclo sigue mientras el número sea distinto de 0 (con > 0 se detendría con un negativo) y el acumulador suma cada número: suma + numero.",
+    "tema": "Ronda 2 · Media"
+  },
+  {
+    "id": "M2",
+    "nivel": "medio",
+    "tipo": "SM",
+    "puntos": 20,
+    "tiempo_segundos": 180,
+    "enunciado": "Relaciona cada situación con el ciclo más adecuado. Cada ciclo se usa una sola vez.\n\n1. Un programa muestra un menú y pide una opción. El menú debe mostrarse al menos una vez y repetirse hasta que el usuario elija \"Salir\".\n2. Imprimir la lista de asistencia de un curso que tiene exactamente 35 estudiantes.\n3. Una tarjeta de bus cobra pasajes mientras haya saldo suficiente. Si al inicio no hay saldo, no se debe cobrar ninguno.\n\nA) for   B) while   C) do-while",
+    "opciones": [
+      "1-B, 2-A, 3-C",
+      "1-C, 2-B, 3-A",
+      "1-A, 2-C, 3-B",
+      "1-C, 2-A, 3-B"
+    ],
+    "respuesta_correcta": 3,
+    "explicacion": "do-while garantiza al menos una ejecución; for cuando se conoce el número de repeticiones; while evalúa antes y puede ejecutarse cero veces.",
+    "tema": "Ronda 2 · Media"
+  },
+  {
+    "id": "M3",
+    "nivel": "medio",
+    "tipo": "SM",
+    "puntos": 20,
+    "tiempo_segundos": 150,
+    "enunciado": "Para cada dato, indica qué estructura usarías para guardarlo.\n\n1. Las notas de los 5 parciales de cada uno de los 40 estudiantes de un curso.\n2. El número de estudiantes inscritos hoy en la Copa.\n3. Los nombres de los 40 estudiantes de un curso.\n\nA) Variable simple   B) Arreglo (vector)   C) Matriz",
+    "opciones": [
+      "1-B, 2-A, 3-C",
+      "1-C, 2-B, 3-A",
+      "1-C, 2-A, 3-B",
+      "1-A, 2-B, 3-C"
+    ],
+    "respuesta_correcta": 2,
+    "explicacion": "Matriz 40 × 5 (estudiantes × parciales); un solo valor en una variable; una lista de 40 nombres en un arreglo.",
+    "tema": "Ronda 2 · Media"
+  },
+  {
+    "id": "M4",
+    "nivel": "medio",
+    "tipo": "SM",
+    "puntos": 20,
+    "tiempo_segundos": 180,
+    "enunciado": "Entra al evento quien es mayor de edad y tiene entrada, o quien es VIP (sin importar su edad ni si tiene entrada). ¿Qué condición lo describe?",
+    "opciones": [
+      "edad >= 18 Y (tiene_entrada O es_vip)",
+      "edad >= 18 O tiene_entrada O es_vip",
+      "(edad >= 18 Y tiene_entrada) O es_vip",
+      "edad >= 18 Y tiene_entrada Y es_vip"
+    ],
+    "respuesta_correcta": 2,
+    "explicacion": "La opción A deja por fuera a un VIP menor de edad; la B deja entrar a cualquier mayor de edad sin entrada.",
+    "tema": "Ronda 2 · Media"
+  },
+  {
+    "id": "M5",
+    "nivel": "medio",
+    "tipo": "IMP",
+    "puntos": 20,
+    "tiempo_segundos": 150,
+    "enunciado": "¿Qué imprime el siguiente pseudocódigo si x = 4 e y = 7?\n\nIF x > 3 THEN\n  IF y > 10 THEN\n    WRITE \"A\"\n  ELSE\n    WRITE \"B\"\n  END IF\nELSE\n  WRITE \"C\"\nEND IF",
+    "opciones": [
+      "A",
+      "C",
+      "B y luego C",
+      "B"
+    ],
+    "respuesta_correcta": 3,
+    "explicacion": "x > 3 es verdadero (entra al IF externo), pero y > 10 es falso (va al ELSE interno): imprime B.",
+    "tema": "Ronda 2 · Media"
+  },
+  {
+    "id": "M6",
+    "nivel": "medio",
+    "tipo": "IMP",
+    "puntos": 20,
+    "tiempo_segundos": 180,
+    "enunciado": "¿Qué imprime el siguiente pseudocódigo?\n\ni = 1\nsuma = 0\nWHILE i <= 5 DO\n  IF i MOD 2 == 0 THEN\n    suma = suma + i\n  END IF\n  i = i + 1\nEND WHILE\nWRITE suma",
+    "opciones": [
+      "6",
+      "9",
+      "15",
+      "4"
+    ],
+    "respuesta_correcta": 0,
+    "explicacion": "Solo suma los pares entre 1 y 5: 2 + 4 = 6.",
+    "tema": "Ronda 2 · Media"
+  },
+  {
+    "id": "M7",
+    "nivel": "medio",
+    "tipo": "ERR",
+    "puntos": 20,
+    "tiempo_segundos": 180,
+    "enunciado": "El algoritmo debe volver a pedir una edad mientras sea menor que 0. ¿Cuál es el error?\n\nREAD edad\nWHILE edad >= 0 DO\n  WRITE \"Edad inválida\"\n  READ edad\nEND WHILE",
+    "opciones": [
+      "Falta un READ edad antes del WHILE para darle un valor inicial",
+      "Debe ser WHILE edad > 0 para que el cero no se acepte como edad",
+      "La condición está invertida: debe ser WHILE edad < 0",
+      "El WRITE debe ir después del READ que está dentro del ciclo"
+    ],
+    "respuesta_correcta": 2,
+    "explicacion": "Con edad >= 0 una edad válida mantiene el ciclo. Debe repetirse mientras la edad sea inválida: WHILE edad < 0.",
+    "tema": "Ronda 2 · Media"
+  },
+  {
+    "id": "D3",
+    "nivel": "dificil",
+    "tipo": "VF",
+    "puntos": 30,
+    "tiempo_segundos": 150,
     "enunciado": "Es posible usar BREAK dentro del ciclo interno para salir también del ciclo externo directamente.",
-    "opciones": ["Verdadero", "Falso"],
+    "opciones": [
+      "Verdadero",
+      "Falso"
+    ],
     "respuesta_correcta": 1,
-    "explicacion": "Falso — BREAK solo sale del ciclo más inmediato donde está. Para salir del externo se necesita una variable bandera u otra estrategia.",
-    "tema": "5.4 Ciclos anidados"
+    "explicacion": "Falso. BREAK solo sale del ciclo más inmediato. Para salir del externo se necesita una variable bandera u otra estrategia.",
+    "tema": "Ronda 3 · Difícil"
   },
   {
-    "id": 27, "nivel": "dificil", "tipo": "ERR", "puntos": 30, "tiempo_segundos": 90,
-    "enunciado": "El algoritmo asigna categorías a una nota: A (90-100), B (70-89), F (menor a 70). ¿Qué está mal?\n\nLEER nota\nIF nota >= 70 THEN\n  ESCRIBIR 'B'\nELSE IF nota >= 90 THEN\n  ESCRIBIR 'A'\nELSE\n  ESCRIBIR 'F'\nEND IF",
+    "id": "D4",
+    "nivel": "dificil",
+    "tipo": "IMP",
+    "puntos": 30,
+    "tiempo_segundos": 240,
+    "enunciado": "La instrucción continuar salta al inicio de la siguiente repetición del ciclo. ¿Qué ocurre al ejecutar este pseudocódigo?\n\ni = 1\nmientras i <= 5 hacer\n    si i == 3 entonces\n        continuar\n    fin si\n    mostrar i\n    i = i + 1\nfin mientras",
     "opciones": [
-      "No hay error",
-      "Falta un ELSE al final",
-      "El IF nota >= 70 captura también las notas >= 90 antes del ELSE IF; los rangos deben ir del mayor al menor",
-      "La variable nota no está inicializada"
+      "Muestra 1, 2, 4 y 5, porque continuar se salta solo el 3",
+      "Muestra 1 y 2, y luego se queda en un ciclo infinito",
+      "Muestra 1, 2, 3, 4 y 5, porque continuar no cambia nada aquí",
+      "Muestra 1 y 2, y luego el ciclo termina porque i llegó a 3"
+    ],
+    "respuesta_correcta": 1,
+    "explicacion": "Cuando i vale 3, continuar salta el incremento, así que i se queda en 3 para siempre. La A sería correcta si el incremento estuviera antes del si.",
+    "tema": "Ronda 3 · Difícil"
+  },
+  {
+    "id": "D5",
+    "nivel": "dificil",
+    "tipo": "ERR",
+    "puntos": 30,
+    "tiempo_segundos": 240,
+    "enunciado": "El algoritmo asigna categorías a una nota: A (90–100), B (70–89), F (menor a 70). ¿Qué está mal?\n\nREAD nota\nIF nota >= 70 THEN\n  WRITE \"B\"\nELSE IF nota >= 90 THEN\n  WRITE \"A\"\nELSE\n  WRITE \"F\"\nEND IF",
+    "opciones": [
+      "La primera condición debe ser nota > 70 en vez de nota >= 70",
+      "Falta un caso que rechace las notas mayores a 100 antes del IF",
+      "Hay que evaluar primero nota >= 90; si no, nunca imprime \"A\"",
+      "El ELSE final debería mostrar \"B\" y no \"F\" para las notas bajas"
     ],
     "respuesta_correcta": 2,
-    "explicacion": "Error de orden: el IF nota >= 70 captura también las notas de 90 a 100 antes del ELSE IF. Los rangos deben evaluarse del mayor al menor: primero >= 90, luego >= 70.",
-    "tema": "2.3 + 4.4 Lógica y condicionales"
+    "explicacion": "Hay que evaluar de mayor a menor: primero nota >= 90, luego nota >= 70.",
+    "tema": "Ronda 3 · Difícil"
   },
   {
-    "id": 28, "nivel": "dificil", "tipo": "IMP", "puntos": 30, "tiempo_segundos": 90,
-    "enunciado": "¿Qué imprime si el usuario ingresa en orden: 5, 3, 8, 2, -1?\n\nmayor = 0\nLEER n\nWHILE n != -1 DO\n  IF n > mayor THEN\n    mayor = n\n  END IF\n  LEER n\nEND WHILE\nESCRIBIR mayor",
-    "opciones": ["8", "5", "-1", "2"],
-    "respuesta_correcta": 0,
-    "explicacion": "Imprime 8 — el algoritmo recorre todos los valores hasta -1 y guarda el mayor encontrado. El -1 no se evalúa porque termina el ciclo.",
-    "tema": "5.2 While + contadores"
-  },
-  {
-    "id": 29, "nivel": "dificil", "tipo": "DF", "puntos": 30, "tiempo_segundos": 90,
-    "enunciado": "¿Cuál describe correctamente el diagrama de flujo de un validador de contraseña (clave: 'hw2024', máximo 3 intentos)?",
+    "id": "D6",
+    "nivel": "dificil",
+    "tipo": "ERR",
+    "puntos": 30,
+    "tiempo_segundos": 240,
+    "enunciado": "El algoritmo debe repetir la lectura mientras el valor esté fuera del rango de 1 a 10. ¿Cuál es el error?\n\nREAD valor\nWHILE valor < 1 AND valor > 10 DO\n  WRITE \"Fuera de rango\"\n  READ valor\nEND WHILE",
     "opciones": [
-      "Inicio → intentos=0 → rombo intentos<3 → READ clave, intentos++ → rombo clave=='hw2024' → sí: WRITE 'Acceso concedido' → Fin / no: volver → al salir del while: WRITE 'Bloqueado' → Fin",
-      "Inicio → READ clave → rombo clave=='hw2024' → WRITE 'OK' → Fin",
-      "Inicio → intentos=0 → READ clave → WRITE 'Acceso' → rombo intentos<3 → Fin",
-      "Inicio → FOR i=1 TO 3 → READ clave → WRITE 'Bloqueado' → Fin"
+      "Debe usar OR, porque ningún valor es < 1 y > 10 a la vez",
+      "Debe ser valor <= 1 AND valor >= 10 para incluir los extremos",
+      "El ciclo nunca termina porque valor no cambia dentro de él",
+      "Falta leer el valor antes del WHILE para poder compararlo"
     ],
     "respuesta_correcta": 0,
-    "explicacion": "El diagrama debe incluir: inicializar intentos, ciclo mientras intentos<3, leer clave e incrementar intentos, verificar si es correcta con BREAK al acertar, y mostrar 'Bloqueado' al agotar intentos.",
-    "tema": "5.2 Do-while + validación"
+    "explicacion": "Ningún número puede ser menor que 1 y mayor que 10 a la vez. Debe usar OR: valor < 1 OR valor > 10.",
+    "tema": "Ronda 3 · Difícil"
   },
   {
-    "id": 30, "nivel": "dificil", "tipo": "COMP", "puntos": 30, "tiempo_segundos": 90,
-    "enunciado": "Completa el pseudocódigo para imprimir solo los múltiplos de 3 entre 1 y 30, y al final cuántos hubo:\n\ncontador = 0\nFOR i = _____ TO 30 DO\n  IF _____ THEN\n    ESCRIBIR i\n    contador = _____\n  END IF\nEND FOR\nESCRIBIR 'Total: ' + _____",
+    "id": "D7",
+    "nivel": "dificil",
+    "tipo": "IMP",
+    "puntos": 30,
+    "tiempo_segundos": 300,
+    "enunciado": "¿Qué imprime el siguiente pseudocódigo?\n\nFOR i = 1 TO 3 DO\n  FOR j = i TO 3 DO\n    WRITE i + \",\" + j + \" \"\n  END FOR\n  WRITE salto_de_línea\nEND FOR",
     "opciones": [
-      "1 / i MOD 3 == 0 / contador + 1 / contador",
-      "3 / i MOD 3 == 0 / contador + 3 / contador",
-      "1 / i MOD 3 != 0 / contador + 1 / i",
-      "0 / i MOD 3 == 0 / contador + 1 / contador"
+      "1,1 1,2 1,3\n2,1 2,2 2,3\n3,1 3,2 3,3",
+      "1,1\n2,1 2,2\n3,1 3,2 3,3",
+      "1,1 1,2 1,3\n2,2 2,3",
+      "1,1 1,2 1,3\n2,2 2,3\n3,3"
     ],
-    "respuesta_correcta": 0,
-    "explicacion": "FOR i = 1, la condición es i MOD 3 == 0 para detectar múltiplos, contador = contador + 1 para contar, y se imprime el valor de contador al final.",
-    "tema": "5.3 For + lógica"
+    "respuesta_correcta": 3,
+    "explicacion": "El ciclo interno empieza en j = i, por eso cada fila tiene un elemento menos.",
+    "tema": "Ronda 3 · Difícil"
+  },
+  {
+    "id": "R1",
+    "nivel": "medio",
+    "tipo": "IMP",
+    "puntos": 20,
+    "tiempo_segundos": 90,
+    "enunciado": "¿Qué imprime el siguiente pseudocódigo?\n\ntotal = 0\nFOR i = 1 TO 3 DO\n  FOR j = 1 TO 2 DO\n    total = total + i\n  END FOR\nEND FOR\nWRITE total",
+    "opciones": [
+      "6",
+      "12",
+      "9",
+      "18"
+    ],
+    "respuesta_correcta": 1,
+    "explicacion": "12 = 1 + 1 + 2 + 2 + 3 + 3: cada valor de i se suma dos veces.",
+    "tema": "Desempate"
+  },
+  {
+    "id": "R2",
+    "nivel": "medio",
+    "tipo": "IMP",
+    "puntos": 20,
+    "tiempo_segundos": 90,
+    "enunciado": "Se ingresan, en orden, 4, 7, 2, 0. ¿Qué imprime el siguiente pseudocódigo?\n\nsuma = 0\nREAD n\nWHILE n != 0 DO\n  IF n MOD 2 == 0 THEN\n    suma = suma + n\n  END IF\n  READ n\nEND WHILE\nWRITE suma",
+    "opciones": [
+      "13",
+      "6",
+      "4",
+      "2"
+    ],
+    "respuesta_correcta": 1,
+    "explicacion": "6 = 4 + 2. El 7 es impar y el 0 solo termina el ciclo.",
+    "tema": "Desempate"
+  },
+  {
+    "id": "R3",
+    "nivel": "facil",
+    "tipo": "VF",
+    "puntos": 15,
+    "tiempo_segundos": 60,
+    "enunciado": "El operador de asignación = y el operador de comparación == cumplen la misma función.",
+    "opciones": [
+      "Verdadero",
+      "Falso"
+    ],
+    "respuesta_correcta": 1,
+    "explicacion": "Falso. = guarda un valor; == compara y produce verdadero o falso.",
+    "tema": "Reserva"
+  },
+  {
+    "id": "R4",
+    "nivel": "medio",
+    "tipo": "IMP",
+    "puntos": 20,
+    "tiempo_segundos": 120,
+    "enunciado": "¿Cuántas veces se ejecuta el cuerpo del ciclo?\n\nFOR i = 2 TO 8 STEP 2 DO\n  WRITE i\nEND FOR",
+    "opciones": [
+      "3",
+      "4",
+      "5",
+      "7"
+    ],
+    "respuesta_correcta": 1,
+    "explicacion": "i toma los valores 2, 4, 6 y 8: 4 veces.",
+    "tema": "Reserva"
+  },
+  {
+    "id": "R5",
+    "nivel": "medio",
+    "tipo": "SM",
+    "puntos": 20,
+    "tiempo_segundos": 120,
+    "enunciado": "El código que calcula el promedio de 3 notas se necesita en 5 lugares distintos del programa. ¿Qué conviene hacer?",
+    "opciones": [
+      "Copiar y pegar el mismo código en cada uno de los 5 lugares",
+      "Usar un ciclo infinito que recalcule el promedio todo el tiempo",
+      "Crear una función y llamarla en cada lugar donde se necesite",
+      "Guardar el promedio en una constante global al inicio del programa"
+    ],
+    "respuesta_correcta": 2,
+    "explicacion": "Una función evita repetir código: se escribe una vez y se llama donde se necesite.",
+    "tema": "Reserva"
   }
 ]

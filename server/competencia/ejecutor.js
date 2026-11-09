@@ -12,6 +12,16 @@ const LENGUAJES = {
 
 const MEMORIA_MAX = 256 * 1024 * 1024 // 256 MB por ejecución
 
+// Límites de tiempo. El límite del problema (p. ej. 2 s) se aplica al TIEMPO DE CPU, es decir, a lo que
+// trabaja el programa. El tiempo de reloj tiene un margen extra: con 20 o más estudiantes el PC se satura,
+// y un programa correcto puede tardar más en "tiempo real" sin ser culpa del estudiante.
+// Estos márgenes necesitan que Piston permita tiempos mayores (ver piston/docker-compose.yml:
+// PISTON_RUN_TIMEOUT y PISTON_COMPILE_TIMEOUT). Si Piston no lo permite, se usan los límites básicos.
+const MARGEN_RELOJ_MS = parseInt(process.env.RETO_MARGEN_RELOJ_MS) || 6000
+const COMPILACION_RELOJ_MS = 30000
+const COMPILACION_CPU_MS = 10000
+let modoBasico = false // true si Piston rechazó los límites ampliados (docker-compose sin actualizar)
+
 // Python: el código del estudiante corre dentro de este envoltorio para que input("Ingrese un número")
 // NO imprima el mensaje (se mezclaría con la salida y la respuesta nunca coincidiría).
 // Los errores se muestran como si vinieran de main.py, con las líneas del estudiante.
@@ -111,7 +121,18 @@ async function estadoMotor() {
     const lenguajes = {}
     for (const [clave, cfg] of Object.entries(LENGUAJES)) lenguajes[clave] = v[cfg.piston] || null
     const ok = Object.values(lenguajes).every(Boolean)
-    return { ok, url: PISTON_URL, lenguajes, mensaje: ok ? 'Motor listo' : 'Falta instalar algún lenguaje en Piston' }
+    // Una ejecución mínima comprueba si Piston acepta los límites de tiempo ampliados (activa modoBasico si no).
+    // Se vuelve a intentar en cada revisión, por si se actualizó Piston con el servidor encendido.
+    if (ok) {
+      modoBasico = false
+      await ejecutar({ lenguaje: 'python', codigo: 'pass', entrada: '', limiteMs: 1000 })
+    }
+    return {
+      ok, url: PISTON_URL, lenguajes, modoBasico,
+      mensaje: !ok ? 'Falta instalar algún lenguaje en Piston'
+        : modoBasico ? 'Motor listo, pero con límites de tiempo básicos: actualiza Piston con npm run piston:up (ver README)'
+          : 'Motor listo'
+    }
   } catch (e) {
     return { ok: false, url: PISTON_URL, lenguajes: {}, mensaje: e.message }
   }
@@ -141,19 +162,30 @@ async function ejecutar({ lenguaje, codigo, entrada = '', limiteMs = 2000 }) {
     const version = v[cfg.piston]
     if (!version) return { estado: 'INTERNO', salida: '', error: `${cfg.nombre} no está instalado en Piston`, ms: 0 }
 
-    const r = await pedir('/execute', {
-      metodo: 'POST',
-      timeoutMs: limiteMs + 25000,
-      cuerpo: {
-        language: cfg.piston,
-        version,
-        files: archivos(lenguaje, codigo),
-        stdin: entrada.endsWith('\n') ? entrada : entrada + '\n',
-        compile_timeout: 10000,
-        run_timeout: limiteMs,
-        run_memory_limit: MEMORIA_MAX
-      }
-    })
+    const base = {
+      language: cfg.piston,
+      version,
+      files: archivos(lenguaje, codigo),
+      stdin: entrada.endsWith('\n') ? entrada : entrada + '\n',
+      run_memory_limit: MEMORIA_MAX
+    }
+    const ampliados = {
+      compile_timeout: COMPILACION_RELOJ_MS,
+      compile_cpu_time: COMPILACION_CPU_MS,
+      run_timeout: limiteMs + MARGEN_RELOJ_MS,
+      run_cpu_time: limiteMs
+    }
+    const basicos = { compile_timeout: 10000, run_timeout: Math.min(limiteMs, 3000) }
+    let r
+    try {
+      r = await pedir('/execute', { metodo: 'POST', timeoutMs: limiteMs + 60000, cuerpo: { ...base, ...(modoBasico ? basicos : ampliados) } })
+    } catch (e) {
+      // Piston sin configurar rechaza tiempos mayores a sus límites por defecto: reintentar con los básicos
+      if (modoBasico || !/exceed|limit/i.test(e.message)) throw e
+      modoBasico = true
+      console.warn('[Piston] No acepta los límites de tiempo ampliados; se usan los básicos. Ejecuta "npm run piston:up" para aplicar piston/docker-compose.yml.')
+      r = await pedir('/execute', { metodo: 'POST', timeoutMs: limiteMs + 60000, cuerpo: { ...base, ...basicos } })
+    }
     const ms = Date.now() - inicio
 
     if (r.compile && (r.compile.code !== 0 || r.compile.status)) {
