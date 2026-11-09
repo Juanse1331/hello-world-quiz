@@ -43,6 +43,10 @@ function bonusTiempo(itemFin, momento) {
   return Math.round(segundosSobrantes * BONUS_POR_SEGUNDO)
 }
 
+function bonusTiempo(itemFin, momento){
+  const segundosSobrantes = Math.max(0, Math.floor((itemFin - momento) / 1000))
+  return Math.round(segundosSobrantes * BONUS_POR_SEGUNDO)
+}
 function texto(valor, max) {
   return typeof valor === 'string' ? valor.trim().slice(0, max) : ''
 }
