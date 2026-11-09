@@ -40,16 +40,16 @@
           <p class="texto-suave">Espera a que el profesor inicie la competencia. Empezará automáticamente.</p>
         </div>
         <ul class="reglas">
-          <li><Icon name="book" :size="16" /> Te saldrán <strong>{{ comp.totalPreguntas }} preguntas</strong><template v-if="comp.totalProblemas"> y <strong>{{ comp.totalProblemas }} retos de programación</strong></template>, mezclados en un orden distinto para cada estudiante.</li>
-          <li><Icon name="clock" :size="16" /> Cada pregunta y cada reto tiene <strong>su propio tiempo</strong>. Cuando se acaba, pasas automáticamente al siguiente.</li>
-          <li><Icon name="arrow-right" :size="16" /> <strong>No puedes volver atrás.</strong> Al responder una pregunta pasas a la siguiente.</li>
-          <li v-if="comp.totalProblemas"><Icon name="skip-forward" :size="16" /> Si un reto se te complica, puedes <strong>saltarlo</strong>: al terminar los demás ítems podrás volver a él con el tiempo que le quedaba.</li>
-          <li><Icon name="target" :size="16" /> Bonus por tiempo: cada segundo que te sobre al acertar una pregunta o resolver un reto al 100 % suma <strong>0,1 puntos</strong> (ej.: resolver en 5 min un reto de 10 min = +30 pts). Sabrás al instante si acertaste; cuál era la opción correcta se revela al final.</li>
+          <li><Icon name="book" :size="16" /><span>Te saldrán <strong>{{ comp.totalPreguntas }} preguntas</strong><template v-if="comp.totalProblemas"> y <strong>{{ comp.totalProblemas }} retos de programación</strong></template>, mezclados en un orden distinto para cada estudiante.</span></li>
+          <li><Icon name="clock" :size="16" /><span>Cada pregunta y cada reto tiene <strong>su propio tiempo</strong>. Cuando se acaba, pasas automáticamente al siguiente.</span></li>
+          <li><Icon name="arrow-right" :size="16" /><span><strong>No puedes volver atrás.</strong> Al responder una pregunta pasas a la siguiente.</span></li>
+          <li v-if="comp.totalProblemas"><Icon name="skip-forward" :size="16" /><span>Si un reto se te complica, puedes <strong>saltarlo</strong>: al terminar los demás ítems podrás volver a él con el tiempo que le quedaba.</span></li>
+          <li><Icon name="target" :size="16" /><span>Bonus por tiempo: cada segundo que te sobre al acertar una pregunta o resolver un reto al 100 % suma <strong>0,1 puntos</strong> (ej.: resolver en 5 min un reto de 10 min = +30 pts). Sabrás al instante si acertaste; cuál era la opción correcta se revela al final.</span></li>
           <template v-if="comp.totalProblemas">
-            <li><Icon name="code" :size="16" /> Retos en <strong>{{ comp.lenguajes.map(lenguajeLabel).join(' o ') }}</strong>. <strong>Probar</strong> usa los ejemplos (ilimitado); <strong>Enviar</strong> califica con pruebas ocultas.</li>
-            <li><Icon name="check-circle" :size="16" /> Un reto termina cuando lo resuelves al 100 %<template v-if="comp.intentosMax > 0">, cuando gastas tus <strong>{{ comp.intentosMax }} intentos fallidos</strong></template> o cuando se acaba su tiempo.</li>
+            <li><Icon name="code" :size="16" /><span>Retos en <strong>{{ comp.lenguajes.map(lenguajeLabel).join(' o ') }}</strong>. <strong>Probar</strong> usa los ejemplos (ilimitado); <strong>Enviar</strong> califica con pruebas ocultas.</span></li>
+            <li><Icon name="check-circle" :size="16" /><span>Un reto termina cuando lo resuelves al 100 %<template v-if="comp.intentosMax > 0">, cuando gastas tus <strong>{{ comp.intentosMax }} intentos fallidos</strong></template> o cuando se acaba su tiempo.</span></li>
           </template>
-          <li><Icon name="trophy" :size="16" /> Si hay empate en puntos, gana quien lo logró en <strong>menos tiempo</strong>.</li>
+          <li><Icon name="trophy" :size="16" /><span>Si hay empate en puntos, gana quien lo logró en <strong>menos tiempo</strong>.</span></li>
         </ul>
       </div>
     </div>
@@ -739,7 +739,8 @@ h2 { color: var(--color-primary); }
 code { background: rgba(0,0,0,0.06); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
 .reglas { list-style: none; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--color-border); display: flex; flex-direction: column; gap: 10px; font-size: 14px; }
 .reglas li { display: flex; gap: 10px; align-items: flex-start; }
-.reglas li .icon { margin-top: 3px; color: var(--color-primary); }
+.reglas li .icon { margin-top: 3px; color: var(--color-primary); flex-shrink: 0; }
+.reglas li > span { flex: 1; min-width: 0; line-height: 1.5; }
 
 /* --- Barra del ítem actual (reloj propio) --- */
 .barra-item { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; background: white; border-bottom: 1px solid var(--color-border); padding: 10px 16px; position: sticky; top: 0; z-index: 5; }
